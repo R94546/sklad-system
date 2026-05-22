@@ -1,0 +1,18 @@
+export const DEBT_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+  OVERDUE: 'OVERDUE',
+};
+
+export const SALE_STATUS = {
+  COMPLETED: 'COMPLETED',
+  CANCELLED: 'CANCELLED',
+  RETURNED: 'RETURNED',
+};
+
+export const PAYMENT_TYPE = {
+  CASH: 'CASH',
+  CARD: 'CARD',
+  DEBT: 'DEBT',
+  MIXED: 'MIXED',
+};

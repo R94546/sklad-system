@@ -1,0 +1,168 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id            String         @id @default(uuid())
+  name          String
+  phone         String         @unique
+  password      String
+  role          Role           @default(SELLER)
+  isActive      Boolean        @default(true)
+  createdAt     DateTime       @default(now())
+  sales         Sale[]
+  stockIns      StockIn[]
+  refreshTokens RefreshToken[]
+  auditLogs     AuditLog[]
+}
+
+enum Role {
+  ADMIN
+  SELLER
+}
+
+model RefreshToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+}
+
+model Category {
+  id       String    @id @default(uuid())
+  name     String    @unique
+  products Product[]
+}
+
+model Product {
+  id         String     @id @default(uuid())
+  name       String
+  barcode    String?    @unique
+  categoryId String
+  category   Category   @relation(fields: [categoryId], references: [id])
+  buyPrice   Decimal
+  sellPrice  Decimal
+  quantity   Int        @default(0)
+  minStock   Int        @default(10)
+  unit       Unit       @default(PIECE)
+  imageUrl   String?
+  isActive   Boolean    @default(true)
+  createdAt  DateTime   @default(now())
+  saleItems  SaleItem[]
+  stockIns   StockIn[]
+}
+
+enum Unit {
+  PIECE
+  KG
+  METER
+  LITER
+  BOX
+}
+
+model Client {
+  id        String   @id @default(uuid())
+  name      String
+  phone     String   @unique
+  address   String?
+  note      String?
+  isBlocked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  sales     Sale[]
+  debts     Debt[]
+}
+
+model Sale {
+  id          String      @id @default(uuid())
+  userId      String
+  user        User        @relation(fields: [userId], references: [id])
+  clientId    String?
+  client      Client?     @relation(fields: [clientId], references: [id])
+  totalAmount Decimal
+  discount    Decimal     @default(0)
+  paymentType PaymentType
+  status      SaleStatus  @default(COMPLETED)
+  createdAt   DateTime    @default(now())
+  items       SaleItem[]
+  debt        Debt?
+}
+
+enum PaymentType {
+  CASH
+  CARD
+  DEBT
+  MIXED
+}
+
+enum SaleStatus {
+  COMPLETED
+  CANCELLED
+  RETURNED
+}
+
+model SaleItem {
+  id        String   @id @default(uuid())
+  saleId    String
+  sale      Sale     @relation(fields: [saleId], references: [id])
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal
+}
+
+model Debt {
+  id        String     @id @default(uuid())
+  saleId    String     @unique
+  sale      Sale       @relation(fields: [saleId], references: [id])
+  clientId  String
+  client    Client     @relation(fields: [clientId], references: [id])
+  amount    Decimal
+  paid      Decimal    @default(0)
+  dueDate   DateTime
+  status    DebtStatus @default(PENDING)
+  createdAt DateTime   @default(now())
+}
+
+enum DebtStatus {
+  PENDING
+  PAID
+  OVERDUE
+}
+model StockIn {
+  id        String   @id @default(uuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id])
+  quantity  Int
+  price     Decimal
+  note      String?
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+}
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  action    String
+  entity    String
+  entityId  String?
+  oldData   Json?
+  newData   Json?
+  createdAt DateTime @default(now())
+}
+model Settings {
+  id            String   @id @default("1")
+  companyName   String   @default("Sklad")
+  companyPhone  String?
+  companyAddress String?
+  currency      String   @default("UZS")
+  taxPercent    Float    @default(0)
+  smsTemplate   String   @default("Hurmatli {name}, {amount} so'm qarzingiz muddati {date} da tugaydi.")
+  reminderDays  Int      @default(1)
+  updatedAt     DateTime @updatedAt
+}
