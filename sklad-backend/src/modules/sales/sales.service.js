@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -100,5 +100,142 @@ export const cancel = async (id) => {
     }
 
     return tx.sale.update({ where: { id }, data: { status: 'CANCELLED' } });
+  });
+};
+
+export const remove = async (id) => {
+  const sale = await prisma.sale.findUnique({ where: { id }, include: { items: true } });
+  if (!sale) throw { status: 404, message: 'Sotuv topilmadi' };
+  for (const item of sale.items) {
+    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
+  }
+  await prisma.saleItem.deleteMany({ where: { saleId: id } });
+  await prisma.sale.delete({ where: { id } });
+  return { success: true };
+};
+
+export const updateSale = async (id, data) => {
+  const updateData = {};
+  if (data.clientId) updateData.clientId = data.clientId;
+  if (data.paymentType) updateData.paymentType = data.paymentType;
+  if (data.status) updateData.status = data.status;
+  if (data.discount !== undefined) updateData.discount = Number(data.discount);
+  return prisma.sale.update({ where: { id }, data: updateData, include: { client: true, user: true, items: { include: { product: true } } } });
+};
+
+export const getCart = async (userId) => {
+  return prisma.sale.findFirst({
+    where: { userId, status: "PENDING" },
+    include: { client: true, user: true, items: { include: { product: true } } }
+  });
+};
+
+export const addToCart = async (userId, productId, quantity, price) => {
+  const product = await prisma.product.findUnique({ where: { id: productId } });
+  if (!product) throw { status: 404, message: "Mahsulot topilmadi" };
+  
+  let cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+  
+  if (!cart) {
+    cart = await prisma.sale.create({
+      data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
+    });
+  }
+  
+  const existing = await prisma.saleItem.findFirst({ where: { saleId: cart.id, productId } });
+  
+  if (existing) {
+    await prisma.saleItem.update({ where: { id: existing.id }, data: { quantity: { increment: quantity } } });
+  } else {
+    await prisma.saleItem.create({ data: { saleId: cart.id, productId, quantity, price: price || product.sellPrice } });
+  }
+  
+  const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
+  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  
+  return prisma.sale.update({
+    where: { id: cart.id },
+    data: { totalAmount: total },
+    include: { items: { include: { product: true } } }
+  });
+};
+
+export const removeFromCart = async (userId, itemId) => {
+  const cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+  if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  await prisma.saleItem.delete({ where: { id: itemId } });
+  const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
+  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  return prisma.sale.update({ where: { id: cart.id }, data: { totalAmount: total }, include: { items: { include: { product: true } } } });
+};
+
+export const confirmCart = async (cartId, data) => {
+  const cart = await prisma.sale.findUnique({ where: { id: cartId }, include: { items: true } });
+  if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  for (const item of cart.items) {
+    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
+  }
+  const total = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const finalTotal = total - Number(data.discount || 0);
+  const updated = await prisma.sale.update({
+    where: { id: cartId },
+    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: Number(data.discount || 0), totalAmount: finalTotal },
+    include: { client: true, user: true, items: { include: { product: true } } }
+  });
+  if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
+    const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
+    await prisma.debt.create({ data: { saleId: cartId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
+  }
+  return updated;
+};
+
+
+export const sendToKassa = async (saleId) => {
+  const sale = await prisma.sale.findUnique({ where: { id: saleId } });
+  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
+  if (sale.status !== "PENDING") throw { status: 400, message: "Faqat savat holatidagi sotuvni kassaga yuborish mumkin" };
+  return prisma.sale.update({
+    where: { id: saleId },
+    data: { status: "SENT_TO_KASSA" },
+    include: { client: true, user: true, items: { include: { product: true } } }
+  });
+};
+
+export const getKassaQueue = async () => {
+  return prisma.sale.findMany({
+    where: { status: "SENT_TO_KASSA" },
+    include: { client: true, user: true, items: { include: { product: true } } },
+    orderBy: { createdAt: "asc" }
+  });
+};
+
+export const kassaConfirm = async (saleId, data) => {
+  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
+  if (sale.status !== "SENT_TO_KASSA") throw { status: 400, message: "Sotuv kassa navbatida emas" };
+  for (const item of sale.items) {
+    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
+  }
+  const total = sale.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const finalTotal = total - Number(data.discount || 0);
+  const updated = await prisma.sale.update({
+    where: { id: saleId },
+    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: Number(data.discount || 0), totalAmount: finalTotal },
+    include: { client: true, user: true, items: { include: { product: true } } }
+  });
+  if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
+    const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
+    await prisma.debt.create({ data: { saleId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
+  }
+  return updated;
+};
+
+export const kassaReturn = async (saleId, reason) => {
+  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
+  return prisma.sale.update({
+    where: { id: saleId },
+    data: { status: "RETURNED" },
+    include: { client: true, user: true, items: { include: { product: true } } }
   });
 };

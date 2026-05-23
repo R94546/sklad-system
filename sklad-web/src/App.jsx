@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import useAuthStore from './store/authStore';
 import MainLayout from './layouts/MainLayout';
@@ -16,6 +16,8 @@ import Categories from './pages/Categories';
 import StockIn from './pages/StockIn';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
+import Cart from './pages/Cart';
+import Kassa from './pages/Kassa';
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuthStore();
@@ -30,7 +32,7 @@ const AdminRoute = ({ children }) => {
 export default function App() {
   return (
     <BrowserRouter>
-      <Toaster position="top-right" />
+      <Toaster position="top-right" toastOptions={{ duration: 3000, style: { background: "#1E293B", color: "#F1F5F9", borderRadius: "10px", border: "1px solid #334155", fontSize: "14px", fontFamily: "Inter, system-ui, sans-serif", padding: "12px 16px", boxShadow: "0 10px 40px rgba(0,0,0,0.3)" }, success: { iconTheme: { primary: "#10B981", secondary: "#F1F5F9" }, style: { background: "#1E293B", color: "#F1F5F9", border: "1px solid #10B981" } }, error: { iconTheme: { primary: "#EF4444", secondary: "#F1F5F9" }, style: { background: "#1E293B", color: "#F1F5F9", border: "1px solid #EF4444" } } }} />
       <Routes>
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
@@ -46,7 +48,10 @@ export default function App() {
         <Route path="/stockin" element={<AdminRoute><StockIn /></AdminRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
+        <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
+        <Route path="/kassa" element={<PrivateRoute><Kassa /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );
 }
+

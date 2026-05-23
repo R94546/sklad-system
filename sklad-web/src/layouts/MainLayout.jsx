@@ -1,74 +1,104 @@
-import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { useState } from 'react';
-import useAuthStore from '../store/authStore';
-import toast from 'react-hot-toast';
-import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList } from 'lucide-react';
-
+﻿import { Link, useNavigate, useLocation } from "react-router-dom";
+import { useState } from "react";
+import useAuthStore from "../store/authStore";
+import useThemeStore from "../store/themeStore";
+import toast from "react-hot-toast";
+import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark } from "lucide-react";
+import useCartStore from "../store/cartStore";
+import { useEffect } from "react";
 
 const navItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard' },
-  { path: '/products', icon: Package, label: 'Mahsulotlar' },
-  { path: '/stockin', icon: PackagePlus, label: 'Kirim', adminOnly: true },
-  { path: '/sales', icon: ShoppingCart, label: 'Sotuvlar' },
-  { path: '/clients', icon: Users, label: 'Mijozlar' },
-  { path: '/debts', icon: CreditCard, label: 'Nasiyalar' },
-  { path: '/analytics', icon: BarChart2, label: 'Analitika', adminOnly: true },
-  { path: '/categories', icon: Tag, label: 'Kategoriyalar', adminOnly: true },
-  { path: '/users', icon: UserCog, label: 'Foydalanuvchilar', adminOnly: true },
-  { path: '/audit', icon: ClipboardList, label: 'Audit log', adminOnly: true },
-  { path: '/settings', icon: Settings, label: 'Sozlamalar', adminOnly: true },
+  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
+  { path: "/products", icon: Package, label: "Mahsulotlar" },
+  { path: "/stockin", icon: PackagePlus, label: "Kirim", adminOnly: true },
+  { path: "/kassa", icon: Landmark, label: "Kassa", kassirOnly: true },
+  { path: "/sales", icon: ShoppingCart, label: "Sotuvlar" },
+  { path: "/clients", icon: Users, label: "Mijozlar" },
+  { path: "/debts", icon: CreditCard, label: "Nasiyalar" },
+  { path: "/analytics", icon: BarChart2, label: "Analitika", adminOnly: true },
+  { path: "/categories", icon: Tag, label: "Kategoriyalar", adminOnly: true },
+  { path: "/users", icon: UserCog, label: "Foydalanuvchilar", adminOnly: true },
+  { path: "/audit", icon: ClipboardList, label: "Audit log", adminOnly: true },
+  { path: "/settings", icon: Settings, label: "Sozlamalar", adminOnly: true },
 ];
 
 export default function MainLayout({ children }) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuthStore();
+  const { dark, toggle } = useThemeStore();
+  const { cart, fetchCart } = useCartStore();
+  const cartCount = cart?.items?.length || 0;
+  useEffect(() => { fetchCart(); }, []);
   const navigate = useNavigate();
   const location = useLocation();
 
   const handleLogout = () => {
     logout();
-    toast.success('Chiqildi');
-    navigate('/login');
+    toast.success("Chiqildi");
+    navigate("/login");
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      <aside className={'fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg transform transition-transform ' + (open ? 'translate-x-0' : '-translate-x-full') + ' md:relative md:translate-x-0'}>
-        <div className="p-4 border-b">
-          <h1 className="text-xl font-bold text-blue-600">Sklad</h1>
-          <p className="text-sm text-gray-500">{user?.name}</p>
+    <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-slate-950 flex flex-col transform transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0`}>
+        <div className="px-6 py-5 border-b border-slate-800 flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
+            <Package size={20} className="text-white" />
+          </div>
+          <div>
+            <h1 className="text-lg font-bold text-white tracking-tight">Sklad</h1>
+            <p className="text-xs text-slate-400">{user?.role === "ADMIN" ? "Administrator" : "Sotuvchi"}</p>
+          </div>
         </div>
-        <nav className="p-4 space-y-1">
-          {navItems.filter(item => !item.adminOnly || user?.role === 'ADMIN').map(({ path, icon: Icon, label }) => (
-            <Link
-              key={path}
-              to={path}
-              onClick={() => setOpen(false)}
-              className={'flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ' + (location.pathname === path ? 'bg-blue-50 text-blue-600' : 'text-gray-700 hover:bg-gray-100')}
-            >
-              <Icon size={18} />
-              {label}
-            </Link>
-          ))}
+
+        <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+          {navItems.filter(item => (!item.adminOnly || user?.role === "ADMIN") && (!item.kassirOnly || user?.role === "KASSIR" || user?.role === "ADMIN")).map(({ path, icon: Icon, label }) => {
+            const active = location.pathname === path;
+            return (
+              <Link key={path} to={path} onClick={() => setOpen(false)}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${active ? "bg-indigo-500/10 text-indigo-400" : "text-slate-400 hover:text-white hover:bg-slate-800/50"}`}>
+                <Icon size={18} strokeWidth={active ? 2.5 : 2} />
+                {label}
+                {active && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-indigo-400" />}
+              </Link>
+            );
+          })}
         </nav>
-        <div className="absolute bottom-4 left-4 right-4">
-          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-red-600 hover:bg-red-50 w-full">
+
+        <div className="p-3 border-t border-slate-800">
+          <div className="flex items-center gap-3 px-3 py-2 mb-2">
+            <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-500 to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+              {user?.name?.[0]?.toUpperCase() || "A"}
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-medium text-white truncate">{user?.name}</p>
+              <p className="text-xs text-slate-400 truncate">{user?.phone}</p>
+            </div>
+            <a href="/cart" className="relative p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+              <ShoppingCart size={16} />
+              {cartCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">{cartCount}</span>}
+            </a>
+            <button onClick={toggle} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
+              {dark ? <Sun size={16} /> : <Moon size={16} />}
+            </button>
+          </div>
+          <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 w-full transition-all">
             <LogOut size={18} />
             Chiqish
           </button>
         </div>
       </aside>
 
-      {open && <div className="fixed inset-0 z-40 bg-black/30 md:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white shadow-sm px-4 py-3 flex items-center gap-3 md:hidden">
-          <button onClick={() => setOpen(!open)}>
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-3 md:hidden">
+          <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
-          <h1 className="text-lg font-bold text-blue-600">Sklad</h1>
+          <h1 className="text-lg font-bold text-slate-900 dark:text-white">Sklad</h1>
         </header>
-        <main className="flex-1 overflow-auto p-4 md:p-6">
+        <main className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50 dark:bg-slate-900">
           {children}
         </main>
       </div>

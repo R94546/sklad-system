@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+﻿import { useEffect, useState } from 'react';
 import { Plus } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
@@ -47,14 +47,14 @@ export default function StockIn() {
     { title: 'Miqdor', key: 'quantity', align: 'right', render: (v, row) => <span className="font-medium text-green-600">+{v} {row.product?.unit}</span> },
     { title: 'Narx', key: 'price', align: 'right', render: (v) => <span>{Number(v).toLocaleString()} so'm</span> },
     { title: 'Jami', key: 'price', align: 'right', render: (v, row) => <span className="font-bold">{(Number(v) * row.quantity).toLocaleString()} so'm</span> },
-    { title: 'Kim', key: 'user', render: (v) => <span className="text-gray-500">{v?.name}</span> },
+    { title: 'Kim', key: 'user', render: (v) => <span className="text-slate-500 dark:text-slate-400">{v?.name}</span> },
     { title: 'Izoh', key: 'note', render: (v) => <span className="text-gray-400 text-xs">{v || '-'}</span> },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-800">Mahsulot kirimi</h1>
+        <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Mahsulot kirimi</h1>
         <Button onClick={() => setModal(true)}><Plus size={16} /> Kirim qilish</Button>
       </div>
 
@@ -77,3 +77,5 @@ export default function StockIn() {
     </div>
   );
 }
+
+

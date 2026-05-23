@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import bcrypt from 'bcryptjs';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
@@ -6,7 +6,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-const select = { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true };
+const select = { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true, imageUrl: true };
 
 export const getAll = async () => {
   return prisma.user.findMany({ select, orderBy: { createdAt: 'desc' } });
@@ -39,9 +39,11 @@ export const update = async (id, data) => {
   if (data.password) updateData.password = await bcrypt.hash(data.password, 10);
   if (data.role) updateData.role = data.role;
   if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
+  if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
   return prisma.user.update({ where: { id }, data: updateData, select });
 };
 
 export const remove = async (id) => {
   return prisma.user.update({ where: { id }, data: { isActive: false }, select });
 };
+

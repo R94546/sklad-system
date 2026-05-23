@@ -13,6 +13,7 @@ model User {
   password      String
   role          Role           @default(SELLER)
   isActive      Boolean        @default(true)
+  imageUrl      String?
   createdAt     DateTime       @default(now())
   sales         Sale[]
   stockIns      StockIn[]
@@ -23,6 +24,7 @@ model User {
 enum Role {
   ADMIN
   SELLER
+  KASSIR
 }
 
 model RefreshToken {
@@ -100,6 +102,8 @@ enum PaymentType {
 }
 
 enum SaleStatus {
+  PENDING
+  SENT_TO_KASSA
   COMPLETED
   CANCELLED
   RETURNED
@@ -166,3 +170,7 @@ model Settings {
   reminderDays  Int      @default(1)
   updatedAt     DateTime @updatedAt
 }
+
+
+
+

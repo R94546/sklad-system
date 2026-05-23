@@ -1,4 +1,4 @@
-import 'dotenv/config';
+﻿import 'dotenv/config';
 import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
 
@@ -65,25 +65,47 @@ export const getSalesChart = async (period = 'week') => {
 };
 
 export const getTopProducts = async () => {
+  const items = await prisma.saleItem.findMany({
+    select: { productId: true, quantity: true, price: true },
+  });
+  const grouped = {};
+  for (const item of items) {
+    if (!grouped[item.productId]) grouped[item.productId] = { qty: 0, amount: 0 };
+    grouped[item.productId].qty += item.quantity;
+    grouped[item.productId].amount += Number(item.price) * item.quantity;
+  }
+  const sorted = Object.entries(grouped).sort((a, b) => b[1].amount - a[1].amount).slice(0, 10);
+  const products = await Promise.all(sorted.map(async ([productId, data]) => {
+    const product = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, unit: true } });
+    return { name: product?.name || "Noaniq", totalSold: data.qty, totalAmount: data.amount };
+  }));
+  return products;
+};
+
+export const getTopProfitProducts = async () => {
   const items = await prisma.saleItem.groupBy({
     by: ['productId'],
     _sum: { quantity: true },
     orderBy: { _sum: { quantity: 'desc' } },
     take: 10,
   });
-
   const products = await Promise.all(
     items.map(async (item) => {
       const product = await prisma.product.findUnique({
         where: { id: item.productId },
-        select: { name: true, unit: true },
+        select: { name: true, buyPrice: true, sellPrice: true, unit: true },
       });
-      return { ...product, totalSold: item._sum.quantity };
+      if (!product) return null;
+      const qty = item._sum.quantity || 0;
+      const profit = (Number(product.sellPrice) - Number(product.buyPrice)) * qty;
+      return { name: product.name, profit, qty, unit: product.unit };
     })
   );
-
-  return products;
+  return products.filter(Boolean).sort((a, b) => b.profit - a.profit);
 };
+
+
+
 
 export const getSellerStats = async () => {
   const sellers = await prisma.sale.groupBy({
@@ -93,14 +115,41 @@ export const getSellerStats = async () => {
     _count: true,
     orderBy: { _sum: { totalAmount: 'desc' } },
   });
-
   return Promise.all(
     sellers.map(async (s) => {
       const user = await prisma.user.findUnique({
         where: { id: s.userId },
         select: { name: true },
       });
-      return { name: user.name, totalAmount: s._sum.totalAmount, count: s._count };
+      return { name: user?.name || 'Noaniq', totalAmount: s._sum.totalAmount, count: s._count };
     })
   );
+};
+
+export const getSellerDashboard = async (userId) => {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const [todaySales, monthSales, totalClients] = await Promise.all([
+    prisma.sale.aggregate({
+      where: { userId, status: { in: ["COMPLETED", "PENDING"] }, createdAt: { gte: today, lt: tomorrow } },
+      _sum: { totalAmount: true },
+      _count: true,
+    }),
+    prisma.sale.aggregate({
+      where: { userId, status: { in: ["COMPLETED", "PENDING"] }, createdAt: { gte: monthStart } },
+      _sum: { totalAmount: true },
+      _count: true,
+    }),
+    prisma.client.count(),
+  ]);
+  return {
+    today: { amount: todaySales._sum.totalAmount || 0, count: todaySales._count },
+    month: { amount: monthSales._sum.totalAmount || 0, count: monthSales._count },
+    totalDebt: 0,
+    lowStockCount: 0,
+    totalClients,
+  };
 };
