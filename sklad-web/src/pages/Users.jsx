@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { Plus, Edit, Power, X } from "lucide-react";
+import { Plus, Edit, Power, X, LogOut } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { Button, Input, Select, Modal, Badge } from "../components/ui";
@@ -148,6 +148,11 @@ export default function Users() {
     setSaving(false);
   };
 
+  const handleForceLogout = async (e, u) => {
+    e.stopPropagation();
+    try { await api.post("/auth/force-logout/" + u.id); toast.success(u.name + " tizimdan chiqarildi"); }
+    catch { toast.error("Xatolik"); }
+  };
   const handleToggle = async (e, u) => {
     e.stopPropagation();
     try { await api.put("/users/" + u.id, { isActive: !u.isActive }); toast.success(u.isActive ? "Ochirildi" : "Yoqildi"); load(); }
@@ -193,6 +198,7 @@ export default function Users() {
                   <td className="px-4 py-3 text-center">
                     <div className="flex items-center justify-center gap-2">
                       <button onClick={e => { e.stopPropagation(); openEdit(u); }} className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg"><Edit size={15} /></button>
+                      <button onClick={e => handleForceLogout(e, u)} title="Tizimdan chiqarish" className="p-1.5 text-orange-500 hover:bg-orange-50 dark:hover:bg-orange-500/10 rounded-lg"><LogOut size={15} /></button>
                       <button onClick={e => handleToggle(e, u)} className={"p-1.5 rounded-lg " + (u.isActive ? "text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10" : "text-emerald-500 hover:bg-emerald-50 dark:hover:bg-emerald-500/10")}><Power size={15} /></button>
                     </div>
                   </td>
@@ -225,4 +231,5 @@ export default function Users() {
     </div>
   );
 }
+
 
