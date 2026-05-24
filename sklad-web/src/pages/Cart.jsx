@@ -19,11 +19,12 @@ const PAYMENT_OPTIONS = [
 const UNITS = { PIECE: "dona", KG: "kg", METER: "metr", LITER: "litr", BOX: "quti" };
 
 function CartDetail({ cart, onConfirm, onRemoveItem, clients }) {
-  const [form, setForm] = useState({ paymentType: "CASH", clientId: "", discount: 0, dueDate: "", debtAmount: "" });
+  const [form, setForm] = useState({ paymentType: "CASH", clientId: "", discount: 0, discountType: "AMOUNT", dueDate: "", debtAmount: "" });
   const [saving, setSaving] = useState(false);
   const clientOptions = clients.map(c => ({ value: c.id, label: c.name + " (" + c.phone + ")" }));
   const total = cart?.items?.reduce((s, i) => s + Number(i.price) * i.quantity, 0) || 0;
-  const finalTotal = total - Number(form.discount || 0);
+  const discountAmount = form.discountType === "PERCENT" ? (total * Number(form.discount || 0) / 100) : Number(form.discount || 0);
+  const finalTotal = total - discountAmount;
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -55,7 +56,16 @@ function CartDetail({ cart, onConfirm, onRemoveItem, clients }) {
             {form.paymentType === "MIXED" && <Input label="Nasiya summasi" type="number" value={form.debtAmount} onChange={e => setForm({...form, debtAmount: e.target.value})} />}
           </>
         )}
-        <Input label="Skidka (som)" type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} />
+        <div className="flex flex-col gap-1">
+          <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Skidka</label>
+          <div className="flex gap-2">
+            <select value={form.discountType} onChange={e => setForm({...form, discountType: e.target.value})} className="border border-slate-300 dark:border-slate-600 rounded-lg px-2 py-2 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+              <option value="AMOUNT">Som</option>
+              <option value="PERCENT">%</option>
+            </select>
+            <input type="number" value={form.discount} onChange={e => setForm({...form, discount: e.target.value})} className="flex-1 border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none" placeholder="0" />
+          </div>
+        </div>
         <div className="border-t border-slate-100 dark:border-slate-700 pt-3 space-y-1">
           <div className="flex justify-between text-sm">
             <span className="text-slate-500">Jami:</span>
@@ -64,7 +74,7 @@ function CartDetail({ cart, onConfirm, onRemoveItem, clients }) {
           {Number(form.discount) > 0 && (
             <div className="flex justify-between text-sm">
               <span className="text-slate-500">Skidka:</span>
-              <span className="text-red-500">-{Number(form.discount).toLocaleString()} som</span>
+              <span className="text-red-500">-{discountAmount.toLocaleString()} som {form.discountType === "PERCENT" ? "(" + form.discount + "%)" : ""}</span>
             </div>
           )}
           <div className="flex justify-between font-bold text-lg mt-2">

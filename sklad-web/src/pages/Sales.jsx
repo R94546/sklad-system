@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState } from "react";
-import { Plus, X, ArrowRight, Trash2, Edit, CheckCircle, XCircle } from "lucide-react";
+import { Plus, X, ArrowRight, Trash2, Edit, RotateCcw } from "lucide-react";
 import EmptyState from "../components/EmptyState";
 import useAuthStore from "../store/authStore";
 import ProductSearch from "../components/ProductSearch";
@@ -13,7 +13,7 @@ const PAYMENT_LABELS = { CASH: "Naqd", CARD: "Karta", DEBT: "Nasiya", MIXED: "Ar
 const PAYMENT_OPTIONS = Object.entries(PAYMENT_LABELS).map(([value, label]) => ({ value, label }));
 const STATUS = { COMPLETED: { label: "Bajarildi", variant: "green" }, CANCELLED: { label: "Bekor", variant: "red" }, RETURNED: { label: "Qaytarildi", variant: "yellow" } };
 
-function SaleDetailModal({ sale, onClose, onDelete, onEdit, isAdmin }) {
+function SaleDetailModal({ sale, onClose, onDelete, onEdit, onReturn, isAdmin }) {
   if (!sale) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -28,6 +28,7 @@ function SaleDetailModal({ sale, onClose, onDelete, onEdit, isAdmin }) {
             <div className="flex gap-2 pb-2 border-b border-slate-100 dark:border-slate-700">
               <button onClick={() => onDelete(sale.id)} className="flex items-center gap-1 px-3 py-1.5 text-sm text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg font-medium"><Trash2 size={14} /> Ochirish</button>
               <button onClick={() => onEdit(sale)} className="flex items-center gap-1 px-3 py-1.5 text-sm text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg font-medium"><Edit size={14} /> Tahrirlash</button>
+              {sale.status === "COMPLETED" && <button onClick={() => onReturn(sale.id)} className="flex items-center gap-1 px-3 py-1.5 text-sm text-amber-500 hover:bg-amber-50 dark:hover:bg-amber-500/10 rounded-lg font-medium"><RotateCcw size={14} /> Qaytarish</button>}
             </div>
           )}
           <div className="grid grid-cols-2 gap-3">
@@ -192,7 +193,7 @@ export default function Sales() {
               ) : filtered.length === 0 ? (
                 <tr><td colSpan={99} className="py-2"><EmptyState type="sales" title="Sotuvlar topilmadi" desc="Yangi sotuv qoshish uchun tugmani bosing" /></td></tr>
               ) : filtered.map(s => (
-                <tr key={s.id} onClick={() => openDetail(s)} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
+                <tr key={s.id} onClick={() => openDetail(s)} className={"cursor-pointer transition-none " + (s.status === "RETURNED" ? "bg-red-50/50 dark:bg-red-500/5 opacity-60" : "hover:bg-slate-50 dark:hover:bg-slate-700/30")}>
                   <td className="px-4 py-3 text-slate-500 dark:text-slate-400 text-xs hidden md:table-cell">{new Date(s.createdAt).toLocaleDateString()}</td>
                   <td className="px-4 py-3 font-medium text-slate-800 dark:text-slate-200">{s.client?.name || "-"}</td>
                   <td className="px-4 py-3 font-bold text-slate-800 dark:text-white text-right">{Number(s.totalAmount).toLocaleString()} som</td>
@@ -207,7 +208,7 @@ export default function Sales() {
       </div>
 
       {productSearch && <ProductSearch onClose={() => setProductSearch(false)} onSelect={(p) => { updateItem(searchIndex, "productId", p.id); }} />}
-      <SaleDetailModal sale={selectedSale} onClose={() => setSelectedSale(null)} isAdmin={isAdmin} onEdit={(s) => { setEditSale(s); setEditForm({ paymentType: s.paymentType, status: s.status, discount: s.discount || 0 }); setSelectedSale(null); setEditModal(true); }} onDelete={async (id) => { if (!confirm("Ochirmoqchimisiz?")) return; try { await api.delete("/sales/" + id); toast.success("Ochirildi"); setSelectedSale(null); load(); } catch { toast.error("Xatolik"); } }} />
+      <SaleDetailModal sale={selectedSale} onClose={() => setSelectedSale(null)} isAdmin={isAdmin} onReturn={async (id) => { if (!confirm("Sotuvni qaytarasizmi? Mahsulotlar ombarga qaytadi.")) return; try { await api.post("/sales/kassa/" + id + "/return", { reason: "Admin qaytardi" }); toast.success("Qaytarildi"); setSelectedSale(null); load(); } catch { toast.error("Xatolik"); } }} onEdit={(s) => { setEditSale(s); setEditForm({ paymentType: s.paymentType, status: s.status, discount: s.discount || 0 }); setSelectedSale(null); setEditModal(true); }} onDelete={async (id) => { if (!confirm("Ochirmoqchimisiz?")) return; try { await api.delete("/sales/" + id); toast.success("Ochirildi"); setSelectedSale(null); load(); } catch { toast.error("Xatolik"); } }} />
 
       <Modal open={editModal} onClose={() => setEditModal(false)} title="Sotuvni tahrirlash" size="sm">
         <div className="space-y-4">

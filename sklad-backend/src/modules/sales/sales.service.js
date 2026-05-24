@@ -176,10 +176,13 @@ export const confirmCart = async (cartId, data) => {
     await prisma.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
   }
   const total = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-  const finalTotal = total - Number(data.discount || 0);
+  const discountType = data.discountType || "AMOUNT";
+  const discountVal = Number(data.discount || 0);
+  const discountAmount = discountType === "PERCENT" ? (total * discountVal / 100) : discountVal;
+  const finalTotal = total - discountAmount;
   const updated = await prisma.sale.update({
     where: { id: cartId },
-    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: Number(data.discount || 0), totalAmount: finalTotal },
+    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: discountAmount, discountType: discountType, totalAmount: finalTotal },
     include: { client: true, user: true, items: { include: { product: true } } }
   });
   if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
@@ -233,9 +236,14 @@ export const kassaConfirm = async (saleId, data) => {
 export const kassaReturn = async (saleId, reason) => {
   const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
   if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
+  if (sale.status === "COMPLETED") {
+    for (const item of sale.items) {
+      await prisma.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
+    }
+  }
   return prisma.sale.update({
     where: { id: saleId },
-    data: { status: "RETURNED" },
+    data: { status: "RETURNED", returnReason: reason || "" },
     include: { client: true, user: true, items: { include: { product: true } } }
   });
 };

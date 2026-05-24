@@ -86,7 +86,9 @@ model Sale {
   clientId    String?
   client      Client?     @relation(fields: [clientId], references: [id])
   totalAmount Decimal
-  discount    Decimal     @default(0)
+  discount     Decimal     @default(0)
+  discountType String      @default("AMOUNT")
+  returnReason String      @default("")
   paymentType PaymentType
   status      SaleStatus  @default(COMPLETED)
   createdAt   DateTime    @default(now())
@@ -170,6 +172,8 @@ model Settings {
   reminderDays  Int      @default(1)
   updatedAt     DateTime @updatedAt
 }
+
+
 
 
 
