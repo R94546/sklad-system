@@ -1,16 +1,12 @@
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
-
-export const audit = async (userId, action, entity, entityId = null, oldData = null, newData = null) => {
+﻿import prisma from "../config/db.js";
+export const audit = async (userId, action, entity, entityId = null, oldData = null, newData = null, req = null) => {
   try {
+    const ip = req ? (req.headers["x-forwarded-for"] || req.socket.remoteAddress || null) : null;
+    const userAgent = req ? (req.headers["user-agent"] || null) : null;
     await prisma.auditLog.create({
-      data: { userId, action, entity, entityId, oldData, newData },
+      data: { userId, action, entity, entityId, oldData, newData, ip, userAgent },
     });
   } catch (err) {
-    console.error('Audit log xatosi:', err.message);
+    console.error("Audit log xatosi:", err.message);
   }
 };

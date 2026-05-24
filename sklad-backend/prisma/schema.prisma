@@ -159,6 +159,8 @@ model AuditLog {
   entityId  String?
   oldData   Json?
   newData   Json?
+  ip        String?
+  userAgent String?
   createdAt DateTime @default(now())
 }
 model Settings {
@@ -172,6 +174,7 @@ model Settings {
   reminderDays  Int      @default(1)
   updatedAt     DateTime @updatedAt
 }
+
 
 
 
