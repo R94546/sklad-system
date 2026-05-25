@@ -1,7 +1,7 @@
-import axios from 'axios';
+﻿import axios from 'axios';
 
 const api = axios.create({
-  baseURL: 'http://172.20.10.4:5000/api',
+  baseURL: 'https://sklad-system-production.up.railway.app/api',
 });
 
 api.interceptors.request.use((config) => {
