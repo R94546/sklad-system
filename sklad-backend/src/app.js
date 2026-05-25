@@ -1,4 +1,4 @@
-import express from 'express';
+﻿import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
@@ -15,6 +15,7 @@ import debtsRoutes from './modules/debts/debts.routes.js';
 import analyticsRoutes from './modules/analytics/analytics.routes.js';
 import auditRoutes from './modules/analytics/audit.routes.js';
 import settingsRoutes from './modules/analytics/settings.routes.js';
+import barcodeRoutes from './modules/products/barcode.routes.js';
 
 const app = express();
 
@@ -40,6 +41,7 @@ app.use('/api/debts', debtsRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/settings', settingsRoutes);
+app.use('/api/barcode', barcodeRoutes);
 
 app.use(errorMiddleware);
 

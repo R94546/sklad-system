@@ -1,5 +1,7 @@
 ﻿import prisma from "../../config/db.js";
 import { uploadImage } from "../../utils/upload.js";
+import { generateBarcode } from "./barcode.service.js";
+
 export const getAll = async (query) => {
   const { search, categoryId, page = 1, limit = 20 } = query;
   const where = {
@@ -13,24 +15,33 @@ export const getAll = async (query) => {
   ]);
   return { data, total, page: Number(page), limit: Number(limit) };
 };
+
 export const getById = async (id) => {
   return prisma.product.findUnique({ where: { id }, include: { category: true } });
 };
+
+export const getByBarcode = async (barcode) => {
+  return prisma.product.findUnique({ where: { barcode }, include: { category: true } });
+};
+
 export const create = async (data, file) => {
   let imageUrl = null;
   if (file) imageUrl = await uploadImage(file, "products");
+  const barcode = data.barcode || await generateBarcode();
   return prisma.product.create({
     data: {
       ...data,
+      barcode,
       buyPrice: Number(data.buyPrice),
       sellPrice: Number(data.sellPrice),
-      quantity: parseInt(data.quantity),
+      quantity: parseInt(data.quantity) || 0,
       minStock: parseInt(data.minStock) || 10,
       ...(imageUrl && { imageUrl }),
     },
     include: { category: true },
   });
 };
+
 export const update = async (id, data, file) => {
   let imageUrl = undefined;
   if (file) imageUrl = await uploadImage(file, "products");
@@ -47,9 +58,11 @@ export const update = async (id, data, file) => {
     include: { category: true },
   });
 };
+
 export const remove = async (id) => {
   return prisma.product.update({ where: { id }, data: { isActive: false } });
 };
+
 export const getLowStock = async () => {
   return prisma.product.findMany({ where: { isActive: true }, include: { category: true } });
 };

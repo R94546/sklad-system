@@ -1,7 +1,8 @@
 ﻿import { useEffect, useState } from "react";
-import { Trash2, ShoppingCart, CheckCircle, Plus, X, Package, Send, UserPlus } from "lucide-react";
+import { Trash2, ShoppingCart, CheckCircle, Plus, X, Package, Send, UserPlus, Scan } from "lucide-react";
 import ProductSearch from "../components/ProductSearch";
 import AddToCartModal from "../components/AddToCartModal";
+import BarcodeScanner from "../components/BarcodeScanner";
 import useCartStore from "../store/cartStore";
 import useAuthStore from "../store/authStore";
 import { useNavigate } from "react-router-dom";
@@ -86,7 +87,6 @@ function CartDetail({ cart, onConfirm, onRemoveItem, clients, onClientsUpdate, i
             </div>
           ))}
         </div>
-
         <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-5 space-y-4 h-fit">
           <h2 className="font-semibold text-slate-700 dark:text-slate-200">Tolov</h2>
           <Select label="Tolov turi" value={form.paymentType} onChange={e => setForm({...form, paymentType: e.target.value})} options={PAYMENT_OPTIONS} />
@@ -154,6 +154,7 @@ export default function Cart() {
   const [clients, setClients] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showSearch, setShowSearch] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
   const [cartProduct, setCartProduct] = useState(null);
   const { addToCart } = useCartStore();
   const { user: authUser } = useAuthStore();
@@ -175,6 +176,16 @@ export default function Cart() {
     load();
     api.get("/clients").then(r => setClients(r.data.data.data));
   }, []);
+
+  const handleScan = async (barcode) => {
+    setShowScanner(false);
+    try {
+      const res = await api.get("/barcode/scan/" + barcode);
+      setCartProduct(res.data.data);
+    } catch {
+      toast.error("Tovar topilmadi: " + barcode);
+    }
+  };
 
   const handleConfirm = async (cartId, form) => {
     try {
@@ -198,10 +209,14 @@ export default function Cart() {
   return (
     <div className="space-y-6 animate-fade-in">
       {showSearch && <ProductSearch onClose={() => setShowSearch(false)} onSelect={(p) => { setShowSearch(false); setCartProduct(p); }} />}
+      {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
       {cartProduct && <AddToCartModal product={cartProduct} onClose={() => setCartProduct(null)} onAdd={async (productId, quantity, price) => { const ok = await addToCart(productId, quantity, price); if (ok) { toast.success(cartProduct.name + " savatga qoshildi"); const r = await api.get("/sales"); const pending = r.data.data.data.filter(s => s.status === "PENDING"); setPendingSales(pending); if (selected) setSelected(pending.find(s => s.id === selected.id) || null); } else toast.error("Xatolik"); }} />}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Savat</h1>
-        <Button onClick={() => setShowSearch(true)}><Plus size={16} /> Mahsulot qoshish</Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setShowScanner(true)}><Scan size={16} /> Skaner</Button>
+          <Button onClick={() => setShowSearch(true)}><Plus size={16} /> Mahsulot qoshish</Button>
+        </div>
       </div>
 
       {selected ? (
@@ -224,7 +239,10 @@ export default function Cart() {
             <div className="flex flex-col items-center justify-center py-16">
               <ShoppingCart size={40} className="text-slate-300 mb-4" />
               <p className="text-slate-400 mb-4">Savat bosh</p>
-              <Button onClick={() => setShowSearch(true)}>Mahsulot qoshish</Button>
+              <div className="flex gap-3">
+                <Button variant="outline" onClick={() => setShowScanner(true)}><Scan size={16} /> Skaner</Button>
+                <Button onClick={() => setShowSearch(true)}>Mahsulot qoshish</Button>
+              </div>
             </div>
           ) : (
             <div className="divide-y divide-slate-50 dark:divide-slate-700">
