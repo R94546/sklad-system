@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+ï»¿import { useEffect, useState } from 'react';
 import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, StatusBar, Alert, ActivityIndicator, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -10,7 +10,7 @@ const PAYMENT_TYPES = [
   { value: 'DEBT', label: 'Nasiya', icon: 'time-outline', color: '#ef4444' },
 ];
 
-export default function SalesScreen() {
+export default function SalesScreen({ navigation }) {
   const [products, setProducts] = useState([]);
   const [clients, setClients] = useState([]);
   const [items, setItems] = useState([]);
@@ -26,16 +26,29 @@ export default function SalesScreen() {
   const insets = useSafeAreaInsets();
 
   useEffect(() => {
-    api.get('/products').then(r => setProducts(r.data.data.data));
+    api.get('/products?limit=1000').then(r => setProducts(r.data.data.data));
     api.get('/clients').then(r => setClients(r.data.data.data));
   }, []);
 
+  // Skaner orqali tovar qo'shish
+  useEffect(() => {
+    const unsubscribe = navigation.addListener('focus', () => {
+      const scannedProduct = navigation.getState()?.routes?.find(r => r.name === 'Sales')?.params?.scannedProduct;
+      if (scannedProduct) {
+        addProduct(scannedProduct);
+        navigation.setParams({ scannedProduct: null });
+      }
+    });
+    return unsubscribe;
+  }, [navigation, items]);
+
   const addProduct = (product) => {
+    if (product.quantity <= 0) return Alert.alert('Xato', 'Bu mahsulot tugagan');
     const existing = items.find(i => i.productId === product.id);
     if (existing) {
-      setItems(items.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i));
+      setItems(prev => prev.map(i => i.productId === product.id ? { ...i, quantity: i.quantity + 1 } : i));
     } else {
-      setItems([...items, { productId: product.id, name: product.name, price: Number(product.sellPrice), quantity: 1, max: product.quantity }]);
+      setItems(prev => [...prev, { productId: product.id, name: product.name, price: Number(product.sellPrice), quantity: 1, max: product.quantity }]);
     }
     setProductModal(false);
     setProductSearch('');
@@ -52,31 +65,21 @@ export default function SalesScreen() {
 
   const total = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const finalTotal = total - Number(discount || 0);
-
   const selectedClient = clients.find(c => c.id === clientId);
 
   const handleSubmit = async () => {
     if (items.length === 0) return Alert.alert('Xato', 'Mahsulot qoshing');
-    if ((paymentType === 'DEBT') && !clientId) return Alert.alert('Xato', 'Mijoz tanlang');
-    if ((paymentType === 'DEBT') && !dueDate) return Alert.alert('Xato', 'Muddat kiriting (YYYY-MM-DD)');
+    if (paymentType === 'DEBT' && !clientId) return Alert.alert('Xato', 'Mijoz tanlang');
+    if (paymentType === 'DEBT' && !dueDate) return Alert.alert('Xato', 'Muddat kiriting');
     setSaving(true);
     try {
       await api.post('/sales', {
         items: items.map(i => ({ productId: i.productId, quantity: i.quantity, price: i.price })),
-        paymentType,
-        clientId: clientId || undefined,
-        dueDate: dueDate || undefined,
-        discount: Number(discount || 0),
+        paymentType, clientId: clientId || undefined, dueDate: dueDate || undefined, discount: Number(discount || 0),
       });
       Alert.alert('Muvaffaqiyat', 'Sotuv amalga oshirildi!');
-      setItems([]);
-      setClientId('');
-      setDueDate('');
-      setDiscount('0');
-      setPaymentType('CASH');
-    } catch (err) {
-      Alert.alert('Xato', err.response?.data?.message || 'Xatolik');
-    }
+      setItems([]); setClientId(''); setDueDate(''); setDiscount('0'); setPaymentType('CASH');
+    } catch (err) { Alert.alert('Xato', err.response?.data?.message || 'Xatolik'); }
     setSaving(false);
   };
 
@@ -110,7 +113,7 @@ export default function SalesScreen() {
           <TouchableOpacity style={styles.selectBtn} onPress={() => setClientModal(true)}>
             <Ionicons name="person-outline" size={18} color="#6b7280" />
             <Text style={[styles.selectText, selectedClient && { color: '#111827' }]}>
-              {selectedClient ? selectedClient.name + ' · ' + selectedClient.phone : 'Mijoz tanlang'}
+              {selectedClient ? selectedClient.name + ' Â· ' + selectedClient.phone : 'Mijoz tanlang'}
             </Text>
             <Ionicons name="chevron-down" size={16} color="#9ca3af" />
           </TouchableOpacity>
@@ -119,30 +122,39 @@ export default function SalesScreen() {
         {paymentType === 'DEBT' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Nasiya muddati</Text>
-            <TextInput
-              style={styles.input}
-              placeholder="2026-06-30"
-              placeholderTextColor="#9ca3af"
-              value={dueDate}
-              onChangeText={setDueDate}
-            />
+            <TextInput style={styles.input} placeholder="2026-06-30" placeholderTextColor="#9ca3af" value={dueDate} onChangeText={setDueDate} />
           </View>
         )}
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Mahsulotlar</Text>
-            <TouchableOpacity style={styles.addBtn} onPress={() => setProductModal(true)}>
-              <Ionicons name="add" size={18} color="#2563eb" />
-              <Text style={styles.addText}>Qoshish</Text>
-            </TouchableOpacity>
+            <View style={styles.addBtns}>
+              <TouchableOpacity style={styles.scanIconBtn} onPress={() => navigation.navigate('Scanner', {
+                mode: 'cart',
+                onScan: (product) => addProduct(product)
+              })}>
+                <Ionicons name="barcode-outline" size={18} color="#2563eb" />
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.addBtn} onPress={() => setProductModal(true)}>
+                <Ionicons name="add" size={18} color="#2563eb" />
+                <Text style={styles.addText}>Qoshish</Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
           {items.length === 0 ? (
-            <TouchableOpacity style={styles.emptyProducts} onPress={() => setProductModal(true)}>
-              <Ionicons name="cube-outline" size={32} color="#d1d5db" />
-              <Text style={styles.emptyText}>Mahsulot qoshing</Text>
-            </TouchableOpacity>
+            <View style={styles.emptyProducts}>
+              <TouchableOpacity onPress={() => navigation.navigate('Scanner', { mode: 'cart', onScan: (product) => addProduct(product) })} style={styles.emptyAction}>
+                <Ionicons name="barcode-outline" size={28} color="#2563eb" />
+                <Text style={styles.emptyActionText}>Barcode skaner</Text>
+              </TouchableOpacity>
+              <View style={styles.emptyDivider} />
+              <TouchableOpacity onPress={() => setProductModal(true)} style={styles.emptyAction}>
+                <Ionicons name="search-outline" size={28} color="#6b7280" />
+                <Text style={[styles.emptyActionText, { color: '#6b7280' }]}>Qidirish</Text>
+              </TouchableOpacity>
+            </View>
           ) : (
             items.map(item => (
               <View key={item.productId} style={styles.itemCard}>
@@ -212,15 +224,12 @@ export default function SalesScreen() {
             <Ionicons name="search-outline" size={18} color="#9ca3af" />
             <TextInput style={styles.modalSearchInput} placeholder="Qidirish..." placeholderTextColor="#9ca3af" value={productSearch} onChangeText={setProductSearch} autoFocus />
           </View>
-          <FlatList
-            data={filteredProducts}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
+          <FlatList data={filteredProducts} keyExtractor={item => item.id} contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.modalItem} onPress={() => addProduct(item)}>
                 <View>
                   <Text style={styles.modalItemName}>{item.name}</Text>
-                  <Text style={styles.modalItemSub}>Qoldiq: {item.quantity} · {Number(item.sellPrice).toLocaleString()} so'm</Text>
+                  <Text style={styles.modalItemSub}>Qoldiq: {item.quantity} Â· {Number(item.sellPrice).toLocaleString()} so'm</Text>
                 </View>
                 <Ionicons name="add-circle" size={24} color="#2563eb" />
               </TouchableOpacity>
@@ -241,10 +250,7 @@ export default function SalesScreen() {
             <Ionicons name="search-outline" size={18} color="#9ca3af" />
             <TextInput style={styles.modalSearchInput} placeholder="Qidirish..." placeholderTextColor="#9ca3af" value={clientSearch} onChangeText={setClientSearch} autoFocus />
           </View>
-          <FlatList
-            data={filteredClients}
-            keyExtractor={item => item.id}
-            contentContainerStyle={{ padding: 16 }}
+          <FlatList data={filteredClients} keyExtractor={item => item.id} contentContainerStyle={{ padding: 16 }}
             renderItem={({ item }) => (
               <TouchableOpacity style={styles.modalItem} onPress={() => { setClientId(item.id); setClientModal(false); setClientSearch(''); }}>
                 <View>
@@ -276,10 +282,14 @@ const styles = StyleSheet.create({
   selectBtn: { flexDirection: 'row', alignItems: 'center', gap: 10, backgroundColor: '#fff', borderRadius: 12, padding: 14, borderWidth: 1, borderColor: '#e5e7eb' },
   selectText: { flex: 1, fontSize: 14, color: '#9ca3af' },
   input: { backgroundColor: '#fff', borderRadius: 12, padding: 14, fontSize: 14, color: '#111827', borderWidth: 1, borderColor: '#e5e7eb' },
+  addBtns: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+  scanIconBtn: { width: 34, height: 34, backgroundColor: '#eff6ff', borderRadius: 10, justifyContent: 'center', alignItems: 'center' },
   addBtn: { flexDirection: 'row', alignItems: 'center', gap: 4 },
   addText: { fontSize: 14, color: '#2563eb', fontWeight: '600' },
-  emptyProducts: { alignItems: 'center', padding: 32, backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', borderStyle: 'dashed', gap: 8 },
-  emptyText: { fontSize: 13, color: '#9ca3af' },
+  emptyProducts: { flexDirection: 'row', backgroundColor: '#fff', borderRadius: 12, borderWidth: 1, borderColor: '#e5e7eb', overflow: 'hidden' },
+  emptyAction: { flex: 1, alignItems: 'center', padding: 24, gap: 8 },
+  emptyActionText: { fontSize: 13, fontWeight: '600', color: '#2563eb' },
+  emptyDivider: { width: 1, backgroundColor: '#e5e7eb' },
   itemCard: { backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, elevation: 1 },
   itemInfo: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10 },
   itemName: { fontSize: 14, fontWeight: '600', color: '#111827' },

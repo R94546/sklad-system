@@ -29,9 +29,7 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
-    "plugins": [
-      "expo-barcode-scanner"
-    ],
+    "plugins": [],
     "extra": {
       "eas": {
         "projectId": "328e1961-c471-4cd2-92f9-e68a8deca99f"
