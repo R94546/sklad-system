@@ -30,7 +30,12 @@ const useCartStore = create((set, get) => ({
       set({ cart: r.data.data });
     } catch {}
   },
-
+  updateItem: async (itemId, quantity) => {
+    try {
+      const r = await api.patch("/sales/cart/item/" + itemId, { quantity });
+      set({ cart: r.data.data });
+    } catch {}
+  },
   confirmCart: async (data) => {
     const cart = get().cart;
     if (!cart) return false;
@@ -47,3 +52,4 @@ const useCartStore = create((set, get) => ({
 }));
 
 export default useCartStore;
+

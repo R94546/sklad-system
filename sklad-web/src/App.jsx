@@ -17,6 +17,7 @@ import StockIn from './pages/StockIn';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
 import Cart from './pages/Cart';
+import POS from './pages/POS';
 import Kassa from './pages/Kassa';
 
 const PrivateRoute = ({ children }) => {
@@ -48,10 +49,14 @@ export default function App() {
         <Route path="/stockin" element={<AdminRoute><StockIn /></AdminRoute>} />
         <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
         <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
+        <Route path="/pos" element={<PrivateRoute><POS /></PrivateRoute>} />
         <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
         <Route path="/kassa" element={<PrivateRoute><Kassa /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>
   );
 }
+
+
+
 

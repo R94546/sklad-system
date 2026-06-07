@@ -12,6 +12,7 @@ const navItems = [
   { path: "/products", icon: Package, label: "Mahsulotlar" },
   { path: "/stockin", icon: PackagePlus, label: "Kirim", adminOnly: true },
   { path: "/kassa", icon: Landmark, label: "Kassa", kassirOnly: true },
+  { path: "/pos", icon: ShoppingCart, label: "Savdo (POS)" },
   { path: "/sales", icon: ShoppingCart, label: "Sotuvlar" },
   { path: "/clients", icon: Users, label: "Mijozlar" },
   { path: "/debts", icon: CreditCard, label: "Nasiyalar" },
@@ -40,7 +41,7 @@ export default function MainLayout({ children }) {
 
   return (
     <div className="flex h-screen bg-slate-50 dark:bg-slate-900">
-      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-slate-950 flex flex-col transform transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"} md:relative md:translate-x-0`}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 dark:bg-slate-950 flex flex-col transform transition-transform duration-200 ${open ? "translate-x-0" : "-translate-x-full"}`}>
         <div className="px-6 py-5 border-b border-slate-800 flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-indigo-500 flex items-center justify-center">
             <Package size={20} className="text-white" />
@@ -89,10 +90,10 @@ export default function MainLayout({ children }) {
         </div>
       </aside>
 
-      {open && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm md:hidden" onClick={() => setOpen(false)} />}
+      {open && <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm" onClick={() => setOpen(false)} />}
 
       <div className="flex-1 flex flex-col overflow-hidden">
-        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-3 md:hidden">
+        <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-3">
           <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -105,3 +106,8 @@ export default function MainLayout({ children }) {
     </div>
   );
 }
+
+
+
+
+

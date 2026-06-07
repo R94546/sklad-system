@@ -1,5 +1,5 @@
 ﻿import { Router } from 'express';
-import { getAll, getById, create, cancel, deleteSale, editSale, getCartHandler, addToCartHandler, removeFromCartHandler, confirmCartHandler, sendToKassaHandler, getKassaQueueHandler, kassaConfirmHandler, kassaReturnHandler } from './sales.controller.js';
+import { getAll, getById, create, cancel, deleteSale, editSale, getCartHandler, addToCartHandler, removeFromCartHandler, updateCartItemHandler, confirmCartHandler, sendToKassaHandler, getKassaQueueHandler, kassaConfirmHandler, kassaReturnHandler } from './sales.controller.js';
 import { authMiddleware } from '../../middleware/auth.middleware.js';
 import { roleMiddleware } from '../../middleware/role.middleware.js';
 
@@ -16,6 +16,7 @@ router.put('/:id', roleMiddleware('ADMIN'), editSale);
 router.get('/cart/my', getCartHandler);
 router.post('/cart/add', addToCartHandler);
 router.delete('/cart/item/:itemId', removeFromCartHandler);
+router.patch('/cart/item/:itemId', updateCartItemHandler);
 router.post('/cart/:id/confirm', confirmCartHandler);
 router.post('/:id/send-to-kassa', sendToKassaHandler);
 router.get('/kassa/queue', getKassaQueueHandler);
@@ -23,6 +24,7 @@ router.post('/kassa/:id/confirm', kassaConfirmHandler);
 router.post('/kassa/:id/return', kassaReturnHandler);
 
 export default router;
+
 
 
 

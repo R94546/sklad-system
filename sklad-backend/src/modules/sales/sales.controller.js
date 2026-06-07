@@ -43,3 +43,11 @@ export const sendToKassaHandler = async (req, res, next) => { try { const data =
 export const getKassaQueueHandler = async (req, res, next) => { try { const data = await getKassaQueue(); return success(res, data); } catch (err) { next(err); } };
 export const kassaConfirmHandler = async (req, res, next) => { try { const data = await kassaConfirm(req.params.id, req.body); return success(res, data); } catch (err) { next(err); } };
 export const kassaReturnHandler = async (req, res, next) => { try { const data = await kassaReturn(req.params.id, req.body.reason); return success(res, data); } catch (err) { next(err); } };
+
+export const updateCartItemHandler = async (req, res, next) => {
+  try {
+    const data = await salesService.updateCartItem(req.user.id, req.params.itemId, req.body.quantity, req.body.price);
+    return success(res, data, 'Yangilandi');
+  } catch (err) { next(err); }
+};
+

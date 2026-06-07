@@ -247,3 +247,20 @@ export const kassaReturn = async (saleId, reason) => {
     include: { client: true, user: true, items: { include: { product: true } } }
   });
 };
+
+export const updateCartItem = async (userId, itemId, quantity, price) => {
+  const cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+  if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  if (quantity !== undefined) {
+    const qty = parseInt(quantity);
+    if (qty <= 0) { await prisma.saleItem.delete({ where: { id: itemId } }); }
+    else { await prisma.saleItem.update({ where: { id: itemId }, data: { quantity: qty } }); }
+  }
+  if (price !== undefined && price !== null && price !== "") {
+    await prisma.saleItem.update({ where: { id: itemId }, data: { price: Number(price) } });
+  }
+  const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
+  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  return prisma.sale.update({ where: { id: cart.id }, data: { totalAmount: total }, include: { items: { include: { product: true } } } });
+};
+
