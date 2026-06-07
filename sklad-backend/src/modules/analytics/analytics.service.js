@@ -13,7 +13,7 @@ export const getDashboard = async () => {
 
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
 
-  const [todaySales, monthSales, totalDebt, lowStock, totalClients] = await Promise.all([
+  const [todaySales, monthSales, totalDebt, activeProducts, totalClients] = await Promise.all([
     prisma.sale.aggregate({
       where: { status: 'COMPLETED', createdAt: { gte: today, lt: tomorrow } },
       _sum: { totalAmount: true },
@@ -28,19 +28,31 @@ export const getDashboard = async () => {
       where: { status: { in: ['PENDING', 'OVERDUE'] } },
       _sum: { amount: true },
     }),
-    prisma.product.count({
-      where: { isActive: true, quantity: { lte: 10 } },
-    }),
+    // Сравнение двух полей (quantity <= minStock) Prisma where не умеет — фильтруем в JS
+    prisma.product.findMany({ where: { isActive: true }, select: { quantity: true, minStock: true } }),
     prisma.client.count(),
   ]);
+
+  const lowStockCount = activeProducts.filter((p) => p.quantity <= p.minStock).length;
 
   return {
     today: { amount: todaySales._sum.totalAmount || 0, count: todaySales._count },
     month: { amount: monthSales._sum.totalAmount || 0, count: monthSales._count },
     totalDebt: totalDebt._sum.amount || 0,
-    lowStockCount: lowStock,
+    lowStockCount,
     totalClients,
   };
+};
+
+// Товары с малым остатком (quantity <= minStock)
+export const getLowStock = async () => {
+  const products = await prisma.product.findMany({
+    where: { isActive: true },
+    select: { id: true, name: true, quantity: true, minStock: true, unit: true, sellPrice: true },
+  });
+  return products
+    .filter((p) => p.quantity <= p.minStock)
+    .sort((a, b) => a.quantity - b.quantity);
 };
 
 export const getSalesChart = async (period = 'week') => {

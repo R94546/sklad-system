@@ -42,3 +42,10 @@ export const getSellerDashboard = async (req, res, next) => {
   } catch (err) { next(err); }
 };
 
+export const getLowStock = async (req, res, next) => {
+  try {
+    const data = await analyticsService.getLowStock();
+    return success(res, data);
+  } catch (err) { next(err); }
+};
+

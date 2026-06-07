@@ -1,5 +1,5 @@
 ﻿import { Router } from "express";
-import { getDashboard, getSalesChart, getTopProducts, getSellerStats, getTopProfitProducts, getSellerDashboard } from "./analytics.controller.js";
+import { getDashboard, getSalesChart, getTopProducts, getSellerStats, getTopProfitProducts, getSellerDashboard, getLowStock } from "./analytics.controller.js";
 import { authMiddleware } from "../../middleware/auth.middleware.js";
 import { roleMiddleware } from "../../middleware/role.middleware.js";
 const router = Router();
@@ -11,4 +11,5 @@ router.get("/sales-chart", getSalesChart);
 router.get("/top-products", getTopProducts);
 router.get("/sellers", getSellerStats);
 router.get("/top-profit", getTopProfitProducts);
+router.get("/low-stock", getLowStock);
 export default router;

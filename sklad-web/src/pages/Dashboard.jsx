@@ -8,7 +8,6 @@ import { DashboardSkeleton } from "../components/Skeleton";
 import { Badge } from "../components/ui";
 import useAuthStore from "../store/authStore";
 
-const PAYMENT_LABELS = { CASH: "Naqd", CARD: "Karta", DEBT: "Nasiya", MIXED: "Aralash" };
 const STATUS = { COMPLETED: { label: "Bajarildi", variant: "green" }, CANCELLED: { label: "Bekor", variant: "red" }, RETURNED: { label: "Qaytarildi", variant: "yellow" }, PENDING: { label: "Savat", variant: "blue" } };
 const STATUS_DEBT = { PENDING: { label: "Kutilmoqda", variant: "yellow" }, PAID: { label: "Tolangan", variant: "green" }, OVERDUE: { label: "Muddati otgan", variant: "red" } };
 
@@ -61,10 +60,7 @@ export default function Dashboard() {
     api.get("/analytics/sales-chart?period=week").then(r => setChart(r.data.data)).catch(() => {});
     api.get("/sales?limit=5").then(r => setRecentSales(r.data.data.data)).catch(() => {});
     if (isAdmin) {
-      api.get("/products?limit=5").then(r => {
-        const low = r.data.data.data.filter(p => p.quantity <= p.minStock);
-        setLowStock(low);
-      }).catch(() => {});
+      api.get("/analytics/low-stock").then(r => setLowStock(r.data.data || [])).catch(() => {});
     }
   }, [authUser]);
 
@@ -136,12 +132,13 @@ export default function Dashboard() {
                 <p className="text-sm text-slate-400 text-center py-4">Hammasi yetarli</p>
               ) : (
                 <div className="space-y-1">
-                  {lowStock.map(p => (
+                  {lowStock.slice(0, 8).map(p => (
                     <div key={p.id} onClick={() => navigate("/products")} className="flex items-center justify-between text-sm cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700/50 rounded-lg px-2 py-1">
-                      <span className="text-slate-700 dark:text-slate-300">{p.name}</span>
-                      <span className="text-red-500 font-medium">{p.quantity} {p.unit}</span>
+                      <span className="text-slate-700 dark:text-slate-300 truncate">{p.name}</span>
+                      <span className={"font-medium flex-shrink-0 ml-2 " + (p.quantity <= 0 ? "text-red-600" : "text-red-500")}>{p.quantity}</span>
                     </div>
                   ))}
+                  {lowStock.length > 8 && <p className="text-xs text-slate-400 text-center pt-1">и ещё {lowStock.length - 8}</p>}
                 </div>
               )}
             </div>
