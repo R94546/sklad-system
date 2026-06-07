@@ -16,6 +16,7 @@ import analyticsRoutes from './modules/analytics/analytics.routes.js';
 import auditRoutes from './modules/analytics/audit.routes.js';
 import settingsRoutes from './modules/analytics/settings.routes.js';
 import barcodeRoutes from './modules/products/barcode.routes.js';
+import sessionsRoutes from './modules/sessions/sessions.routes.js';
 
 const app = express();
 
@@ -42,6 +43,7 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/audit', auditRoutes);
 app.use('/api/settings', settingsRoutes);
 app.use('/api/barcode', barcodeRoutes);
+app.use('/api/sessions', sessionsRoutes);
 
 app.use(errorMiddleware);
 

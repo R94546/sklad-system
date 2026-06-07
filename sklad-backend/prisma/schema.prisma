@@ -19,6 +19,7 @@ model User {
   stockIns      StockIn[]
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
+  cashSessions  CashSession[]
 }
 
 enum Role {
@@ -92,6 +93,8 @@ model Sale {
   paymentType PaymentType
   status      SaleStatus  @default(COMPLETED)
   createdAt   DateTime    @default(now())
+  sessionId   String?
+  session     CashSession? @relation(fields: [sessionId], references: [id])
   items       SaleItem[]
   debt        Debt?
 }
@@ -173,6 +176,45 @@ model Settings {
   smsTemplate   String   @default("Hurmatli {name}, {amount} so'm qarzingiz muddati {date} da tugaydi.")
   reminderDays  Int      @default(1)
   updatedAt     DateTime @updatedAt
+}
+
+// Смена (касса) — открытие/закрытие
+model CashSession {
+  id           String        @id @default(uuid())
+  sellerId     String
+  seller       User          @relation(fields: [sellerId], references: [id])
+  openingCash  Float         @default(0)
+  openingNote  String?
+  closingCash  Float?
+  expectedCash Float?
+  difference   Float?
+  closingNote  String?
+  status       SessionStatus @default(OPEN)
+  openedAt     DateTime      @default(now())
+  closedAt     DateTime?
+  sales        Sale[]
+  movements    CashMovement[]
+}
+
+enum SessionStatus {
+  OPEN
+  CLOSED
+}
+
+// Наличные приход/расход в кассе
+model CashMovement {
+  id        String      @id @default(uuid())
+  sessionId String
+  session   CashSession @relation(fields: [sessionId], references: [id])
+  type      CashType
+  amount    Float
+  reason    String
+  createdAt DateTime    @default(now())
+}
+
+enum CashType {
+  IN
+  OUT
 }
 
 

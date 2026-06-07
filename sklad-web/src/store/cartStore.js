@@ -28,13 +28,23 @@ const useCartStore = create((set, get) => ({
     try {
       const r = await api.delete("/sales/cart/item/" + itemId);
       set({ cart: r.data.data });
-    } catch {}
+    } catch { /* игнорируем */ }
   },
   updateItem: async (itemId, quantity) => {
     try {
       const r = await api.patch("/sales/cart/item/" + itemId, { quantity });
       set({ cart: r.data.data });
-    } catch {}
+    } catch { /* игнорируем */ }
+  },
+  // Обновление позиции корзины: количество и/или цена (для цифровой клавиатуры POS)
+  patchItem: async (itemId, data) => {
+    try {
+      const r = await api.patch("/sales/cart/item/" + itemId, data);
+      set({ cart: r.data.data });
+      return true;
+    } catch {
+      return false;
+    }
   },
   confirmCart: async (data) => {
     const cart = get().cart;
