@@ -811,12 +811,15 @@ function ClientPicker({ clients, selected, onSelect, onClear, onCreated, onClose
               {list.length === 0 ? (
                 <p className="text-center text-slate-400 text-sm py-8">Клиенты не найдены</p>
               ) : list.map((c) => (
-                <button key={c.id} onClick={() => onSelect(c)} className={"w-full flex items-center justify-between px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 border-b border-slate-50 dark:border-slate-700/50 transition " + (selected?.id === c.id ? "bg-teal-50 dark:bg-teal-500/10" : "")}>
-                  <div className="text-left">
-                    <p className="text-sm font-medium text-slate-800 dark:text-white">{c.name}</p>
+                <button key={c.id} onClick={() => onSelect(c)} className={"w-full flex items-center gap-2 px-5 py-3 hover:bg-slate-50 dark:hover:bg-slate-700/40 border-b border-slate-50 dark:border-slate-700/50 transition " + (selected?.id === c.id ? "bg-teal-50 dark:bg-teal-500/10" : "")}>
+                  <div className="text-left min-w-0">
+                    <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{c.name}</p>
                     <p className="text-xs text-slate-400">{c.phone}</p>
                   </div>
-                  {selected?.id === c.id && <Check size={18} className="text-teal-500" />}
+                  <div className="flex items-center gap-2 ml-auto shrink-0">
+                    {c.totalDue > 0 && <span className="text-xs font-semibold text-rose-500 whitespace-nowrap">Долг: {fmt(c.totalDue)} сом</span>}
+                    {selected?.id === c.id && <Check size={18} className="text-teal-500" />}
+                  </div>
                 </button>
               ))}
             </div>

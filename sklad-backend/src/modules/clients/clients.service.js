@@ -24,7 +24,18 @@ export const getAll = async (query) => {
     }),
     prisma.client.count({ where }),
   ]);
-  return { data, total, page: Number(page), limit: Number(limit) };
+  // Агрегат непогашенного долга по каждому клиенту (totalDue)
+  const ids = data.map((c) => c.id);
+  const debts = ids.length
+    ? await prisma.debt.findMany({
+        where: { clientId: { in: ids }, status: { in: ['PENDING', 'OVERDUE'] } },
+        select: { clientId: true, amount: true, paid: true },
+      })
+    : [];
+  const dueMap = {};
+  for (const d of debts) dueMap[d.clientId] = (dueMap[d.clientId] || 0) + (Number(d.amount) - Number(d.paid));
+  const withDue = data.map((c) => ({ ...c, totalDue: Math.round(dueMap[c.id] || 0) }));
+  return { data: withDue, total, page: Number(page), limit: Number(limit) };
 };
 
 export const getById = async (id) => {
