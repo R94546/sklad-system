@@ -3,7 +3,7 @@ import { useState } from "react";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import toast from "react-hot-toast";
-import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark } from "lucide-react";
+import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark, Wallet } from "lucide-react";
 import useCartStore from "../store/cartStore";
 import { useEffect } from "react";
 
@@ -16,6 +16,7 @@ const navItems = [
   { path: "/sales", icon: ShoppingCart, label: "Sotuvlar" },
   { path: "/clients", icon: Users, label: "Mijozlar" },
   { path: "/debts", icon: CreditCard, label: "Nasiyalar" },
+  { path: "/sessions", icon: Wallet, label: "Смены", adminOnly: true },
   { path: "/analytics", icon: BarChart2, label: "Analitika", adminOnly: true },
   { path: "/categories", icon: Tag, label: "Kategoriyalar", adminOnly: true },
   { path: "/users", icon: UserCog, label: "Foydalanuvchilar", adminOnly: true },

@@ -94,7 +94,13 @@
 
 **→ БОСКИЧ 3 завершён (кроме SMS — ждёт шлюз).**
 
-### Дальше — БОСКИЧ 4–8: товар/склад (StockReceipt), дашборд админа, дизайн (тёмная тема всего приложения), mobile, desktop. См. `tz,plan/SKLAD_TZ.md` раздел 11.
+### БОСКИЧ 5 — Админ (частично)
+- ✅ **Админ-просмотр смен** — `sklad-web/src/pages/Sessions.jsx` (роут `/sessions`, пункт меню «Смены»). Таблица смен, фильтр Все/Открытые/Закрытые, детали (открытие, продажи, ожидаемо/подсчитано/разница, приход-расход, продажи смены). API `GET /sessions` [admin].
+- ⬜ Dashboard (KPI+график+топ+low-stock) — есть `Analytics.jsx`/`Dashboard.jsx`, проверить/доработать.
+- ⬜ Users (управление продавцами, лимиты) — есть `Users.jsx`.
+- ⬜ Settings — есть `Settings.jsx`.
+
+### Дальше — БОСКИЧ 4: товар/склад (ProductFormModal, StockReceipt, low-stock); БОСКИЧ 6–8: дизайн (тёмная тема всего приложения), mobile, desktop. См. `tz,plan/SKLAD_TZ.md` раздел 11.
 
 > Многие пункты дальше требуют миграций Prisma (CashSession, Payment[], Client.totalDue, Sale.number/note, StockReceipt, расширение User/Product/Category по ТЗ §2). Все они упираются в одно решение — можно ли пушить схему в prod Railway. До этого двигаюсь только по фронтенд-задачам на текущих моделях.
 
