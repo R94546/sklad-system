@@ -103,9 +103,8 @@
 - ⬜ Settings — есть `Settings.jsx`, работает.
 
 ### БОСКИЧ 6 — Русификация интерфейса (в процессе)
-- ✅ Меню/сайдбар (`MainLayout`) — на русском.
-- ✅ `Dashboard.jsx` — на русском (валюта «сом», формат ru-RU).
-- ⬜ Остальные страницы: Products, Clients, Debts, Sales, Settings, Categories, StockIn, Kassa, Login, Cart — перевести.
+- ✅ Меню/сайдбар (`MainLayout`), `Dashboard`, `Login`, `Products`, `Sales`, `Debts` — на русском (валюта «сом», формат ru-RU).
+- ⬜ Осталось перевести: Clients, Settings, Categories, StockIn, Kassa, Cart + компоненты (AddToCartModal, ProductSearch, EmptyState, Skeleton, ui/*). POS/Заказы/Смены/Sessions — уже на русском.
 
 ### Дальше — БОСКИЧ 7–8: mobile (Expo), desktop (Electron). StockReceipt (партийная приёмка) — опционально, дублирует существующий StockIn. SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
 
