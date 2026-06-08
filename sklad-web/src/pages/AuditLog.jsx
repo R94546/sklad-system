@@ -1,22 +1,26 @@
-﻿import { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { Badge } from "../components/ui";
 import { Monitor, Smartphone, Tablet } from "lucide-react";
 
 const ACTIONS = {
-  CREATE: { label: "Yaratildi", variant: "green" },
-  UPDATE: { label: "Yangilandi", variant: "blue" },
-  DELETE: { label: "Ochirildi", variant: "red" },
-  LOGIN:  { label: "Kirdi", variant: "purple" },
-  LOGOUT: { label: "Chiqdi", variant: "gray" },
+  CREATE: { label: "Создано", variant: "green" },
+  UPDATE: { label: "Обновлено", variant: "blue" },
+  DELETE: { label: "Удалено", variant: "red" },
+  LOGIN:  { label: "Вход", variant: "purple" },
+  LOGOUT: { label: "Выход", variant: "gray" },
+  OPEN_SESSION: { label: "Смена открыта", variant: "green" },
+  CLOSE_SESSION: { label: "Смена закрыта", variant: "gray" },
+  CASH_IN: { label: "Приход кассы", variant: "green" },
+  CASH_OUT: { label: "Расход кассы", variant: "yellow" },
 };
 
 function getDevice(ua) {
-  if (!ua) return { icon: <Monitor size={14} />, label: "Noma'lum" };
-  if (/mobile|android|iphone/i.test(ua)) return { icon: <Smartphone size={14} />, label: "Telefon" };
-  if (/tablet|ipad/i.test(ua)) return { icon: <Tablet size={14} />, label: "Planshet" };
-  return { icon: <Monitor size={14} />, label: "Kompyuter" };
+  if (!ua) return { icon: <Monitor size={14} />, label: "Неизвестно" };
+  if (/mobile|android|iphone/i.test(ua)) return { icon: <Smartphone size={14} />, label: "Телефон" };
+  if (/tablet|ipad/i.test(ua)) return { icon: <Tablet size={14} />, label: "Планшет" };
+  return { icon: <Monitor size={14} />, label: "Компьютер" };
 }
 
 function getBrowser(ua) {
@@ -26,7 +30,7 @@ function getBrowser(ua) {
   if (/safari/i.test(ua) && !/chrome/i.test(ua)) return "Safari";
   if (/edg/i.test(ua)) return "Edge";
   if (/opera|opr/i.test(ua)) return "Opera";
-  return "Boshqa";
+  return "Другой";
 }
 
 function Avatar({ name }) {
@@ -52,16 +56,17 @@ export default function AuditLog() {
       const res = await api.get("/audit?page=" + page + "&limit=" + limit);
       setLogs(res.data.data.data);
       setTotal(res.data.data.total);
-    } catch { toast.error("Xatolik"); }
+    } catch { toast.error("Ошибка"); }
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [page]);
   const totalPages = Math.ceil(total / limit);
 
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Audit log</h1>
+      <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Журнал</h1>
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
         {loading ? (
           <div className="p-8 text-center"><div className="animate-spin h-6 w-6 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto" /></div>
@@ -69,12 +74,12 @@ export default function AuditLog() {
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-700">
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Foydalanuvchi</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Amal</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Ob'ekt</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Qurilma</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Пользователь</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Действие</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Объект</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Устройство</th>
                 <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">IP</th>
-                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Sana</th>
+                <th className="text-left px-4 py-3 text-xs font-semibold text-slate-500 uppercase">Дата</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
@@ -108,7 +113,7 @@ export default function AuditLog() {
                       <span className="text-xs font-mono text-slate-500 dark:text-slate-400">{log.ip || "-"}</span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className="text-xs text-slate-400">{new Date(log.createdAt).toLocaleString()}</span>
+                      <span className="text-xs text-slate-400">{new Date(log.createdAt).toLocaleString("ru-RU")}</span>
                     </td>
                   </tr>
                 );
@@ -119,11 +124,11 @@ export default function AuditLog() {
       </div>
       {totalPages > 1 && (
         <div className="flex items-center justify-between bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 px-4 py-3">
-          <p className="text-sm text-slate-500 dark:text-slate-400">Jami: {total} ta yozuv</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Всего: {total} записей</p>
           <div className="flex gap-2">
-            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-slate-50 dark:bg-slate-700/50 disabled:opacity-50">Oldingi</button>
+            <button onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-slate-50 dark:bg-slate-700/50 disabled:opacity-50">Назад</button>
             <span className="px-3 py-1.5 text-sm bg-indigo-600 text-white rounded-lg">{page} / {totalPages}</span>
-            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-slate-50 dark:bg-slate-700/50 disabled:opacity-50">Keyingi</button>
+            <button onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages} className="px-3 py-1.5 text-sm border rounded-lg hover:bg-slate-50 dark:bg-slate-700/50 disabled:opacity-50">Вперёд</button>
           </div>
         </div>
       )}

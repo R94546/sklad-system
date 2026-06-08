@@ -1,12 +1,12 @@
-﻿import { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Phone, MapPin, Ban } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Button, Badge, Table } from '../components/ui';
 
-const PAYMENT_LABELS = { CASH: 'Naqd', CARD: 'Karta', DEBT: 'Nasiya', MIXED: 'Aralash' };
-const DEBT_STATUS = { PENDING: { label: 'Kutilmoqda', variant: 'yellow' }, PAID: { label: 'Tolangan', variant: 'green' }, OVERDUE: { label: 'Muddati otgan', variant: 'red' } };
+const PAYMENT_LABELS = { CASH: 'Наличные', CARD: 'Карта', DEBT: 'Долг', MIXED: 'Смешанная' };
+const DEBT_STATUS = { PENDING: { label: 'Ожидает', variant: 'yellow' }, PAID: { label: 'Оплачен', variant: 'green' }, OVERDUE: { label: 'Просрочен', variant: 'red' } };
 
 export default function ClientDetail() {
   const { id } = useParams();
@@ -18,38 +18,39 @@ export default function ClientDetail() {
     try {
       const res = await api.get('/clients/' + id);
       setClient(res.data.data);
-    } catch { toast.error('Xatolik'); }
+    } catch { toast.error('Ошибка'); }
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [id]);
 
   const handleBlock = async () => {
     try {
       await api.patch('/clients/' + id + '/block', { isBlocked: !client.isBlocked });
-      toast.success(client.isBlocked ? 'Blokdan chiqarildi' : 'Bloklandi');
+      toast.success(client.isBlocked ? 'Разблокирован' : 'Заблокирован');
       load();
-    } catch { toast.error('Xatolik'); }
+    } catch { toast.error('Ошибка'); }
   };
 
   if (loading) return <div className="flex items-center justify-center h-64"><div className="animate-spin h-8 w-8 border-4 border-blue-600 border-t-transparent rounded-full" /></div>;
-  if (!client) return <div className="text-center py-20 text-slate-400 dark:text-slate-500">Topilmadi</div>;
+  if (!client) return <div className="text-center py-20 text-slate-400 dark:text-slate-500">Не найдено</div>;
 
   const totalPurchase = client.sales?.reduce((sum, s) => sum + Number(s.totalAmount), 0) || 0;
   const totalDebt = client.debts?.filter(d => d.status !== 'PAID').reduce((sum, d) => sum + (Number(d.amount) - Number(d.paid)), 0) || 0;
 
   const saleColumns = [
-    { title: 'Sana', key: 'createdAt', render: (v) => <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(v).toLocaleDateString()}</span> },
-    { title: 'Summa', key: 'totalAmount', align: 'right', render: (v) => <span className="font-medium">{Number(v).toLocaleString()} so'm</span> },
-    { title: 'Tolov', key: 'paymentType', align: 'center', render: (v) => <Badge variant="blue">{PAYMENT_LABELS[v]}</Badge> },
-    { title: '', key: 'id', align: 'center', render: (v) => <a href={'/sales/' + v} className="text-indigo-500 dark:text-indigo-400 text-xs hover:underline">Ko'rish в†’</a> },
+    { title: 'Дата', key: 'createdAt', render: (v) => <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(v).toLocaleDateString('ru-RU')}</span> },
+    { title: 'Сумма', key: 'totalAmount', align: 'right', render: (v) => <span className="font-medium">{Number(v).toLocaleString('ru-RU')} сом</span> },
+    { title: 'Оплата', key: 'paymentType', align: 'center', render: (v) => <Badge variant="blue">{PAYMENT_LABELS[v]}</Badge> },
+    { title: '', key: 'id', align: 'center', render: (v) => <a href={'/sales/' + v} className="text-indigo-500 dark:text-indigo-400 text-xs hover:underline">Открыть →</a> },
   ];
 
   const debtColumns = [
-    { title: 'Summa', key: 'amount', render: (v) => <span className="font-medium">{Number(v).toLocaleString()} so'm</span> },
-    { title: 'Qoldiq', key: 'amount', align: 'right', render: (v, row) => <span className="text-red-500 font-medium">{(Number(v) - Number(row.paid)).toLocaleString()} so'm</span> },
-    { title: 'Muddat', key: 'dueDate', align: 'center', render: (v) => <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(v).toLocaleDateString()}</span> },
-    { title: 'Holat', key: 'status', align: 'center', render: (v) => <Badge variant={DEBT_STATUS[v]?.variant}>{DEBT_STATUS[v]?.label}</Badge> },
+    { title: 'Сумма', key: 'amount', render: (v) => <span className="font-medium">{Number(v).toLocaleString('ru-RU')} сом</span> },
+    { title: 'Остаток', key: 'amount', align: 'right', render: (v, row) => <span className="text-red-500 font-medium">{(Number(v) - Number(row.paid)).toLocaleString('ru-RU')} сом</span> },
+    { title: 'Срок', key: 'dueDate', align: 'center', render: (v) => <span className="text-xs text-slate-500 dark:text-slate-400">{new Date(v).toLocaleDateString('ru-RU')}</span> },
+    { title: 'Статус', key: 'status', align: 'center', render: (v) => <Badge variant={DEBT_STATUS[v]?.variant}>{DEBT_STATUS[v]?.label}</Badge> },
   ];
 
   return (
@@ -60,7 +61,7 @@ export default function ClientDetail() {
         </button>
         <h1 className="text-2xl font-bold text-slate-800 flex-1">{client.name}</h1>
         <Button variant={client.isBlocked ? 'outline' : 'danger'} onClick={handleBlock}>
-          <Ban size={16} /> {client.isBlocked ? 'Blokdan chiqarish' : 'Bloklash'}
+          <Ban size={16} /> {client.isBlocked ? 'Разблокировать' : 'Заблокировать'}
         </Button>
       </div>
 
@@ -83,41 +84,39 @@ export default function ClientDetail() {
             )}
           </div>
           <div className="ml-auto">
-            <Badge variant={client.isBlocked ? 'red' : 'green'}>{client.isBlocked ? 'Bloklangan' : 'Faol'}</Badge>
+            <Badge variant={client.isBlocked ? 'red' : 'green'}>{client.isBlocked ? 'Заблокирован' : 'Активен'}</Badge>
           </div>
         </div>
 
         <div className="grid grid-cols-3 gap-4 pt-4 border-t">
           <div className="text-center">
             <p className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">{client.sales?.length || 0}</p>
-            <p className="text-xs text-gray-500 mt-1">Xaridlar</p>
+            <p className="text-xs text-gray-500 mt-1">Покупки</p>
           </div>
           <div className="text-center border-x">
-            <p className="text-2xl font-bold text-green-600">{totalPurchase.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">Jami xarid (so'm)</p>
+            <p className="text-2xl font-bold text-green-600">{totalPurchase.toLocaleString('ru-RU')}</p>
+            <p className="text-xs text-gray-500 mt-1">Всего покупок (сом)</p>
           </div>
           <div className="text-center">
-            <p className="text-2xl font-bold text-red-500">{totalDebt.toLocaleString()}</p>
-            <p className="text-xs text-gray-500 mt-1">Qarz qoldig'i (so'm)</p>
+            <p className="text-2xl font-bold text-red-500">{totalDebt.toLocaleString('ru-RU')}</p>
+            <p className="text-xs text-gray-500 mt-1">Остаток долга (сом)</p>
           </div>
         </div>
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="px-5 py-3 border-b bg-slate-50 dark:bg-slate-700/50">
-          <h2 className="font-semibold text-slate-700 dark:text-slate-300">Oxirgi xaridlar</h2>
+          <h2 className="font-semibold text-slate-700 dark:text-slate-300">Последние покупки</h2>
         </div>
-        <Table columns={saleColumns} data={client.sales || []} emptyText="Xaridlar topilmadi" />
+        <Table columns={saleColumns} data={client.sales || []} emptyText="Покупок нет" />
       </div>
 
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="px-5 py-3 border-b bg-slate-50 dark:bg-slate-700/50">
-          <h2 className="font-semibold text-slate-700 dark:text-slate-300">Nasiyalar</h2>
+          <h2 className="font-semibold text-slate-700 dark:text-slate-300">Долги</h2>
         </div>
-        <Table columns={debtColumns} data={client.debts || []} emptyText="Nasiyalar topilmadi" />
+        <Table columns={debtColumns} data={client.debts || []} emptyText="Долгов нет" />
       </div>
     </div>
   );
 }
-
-
