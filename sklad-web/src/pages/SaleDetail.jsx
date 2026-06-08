@@ -2,7 +2,6 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Printer } from 'lucide-react';
 import api from '../api/axios';
-import toast from 'react-hot-toast';
 import { Button, Badge } from '../components/ui';
 import printJS from 'print-js';
 
@@ -21,6 +20,7 @@ export default function SaleDetail() {
       api.get('/sales/' + id).then(r => setSale(r.data.data)),
       api.get('/settings').then(r => setSettings(r.data.data)),
     ]).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handlePrint = () => {
