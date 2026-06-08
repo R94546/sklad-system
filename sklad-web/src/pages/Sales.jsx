@@ -111,11 +111,12 @@ export default function Sales() {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     api.get("/products").then(r => setProducts(r.data.data.data));
     api.get("/clients").then(r => setClients(r.data.data.data));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const openDetail = async (sale) => {
