@@ -14,6 +14,8 @@ model User {
   role          Role           @default(SELLER)
   isActive      Boolean        @default(true)
   imageUrl      String?
+  maxDiscountPercent Float     @default(0)
+  canEditPrice  Boolean        @default(false)
   createdAt     DateTime       @default(now())
   sales         Sale[]
   stockIns      StockIn[]

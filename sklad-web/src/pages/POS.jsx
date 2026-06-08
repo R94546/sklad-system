@@ -109,6 +109,11 @@ export default function POS() {
   const items = cart?.items || [];
   const selectedItem = items.find((i) => i.id === selectedItemId) || null;
 
+  // Лимиты продавца
+  const isAdmin = user?.role === "ADMIN";
+  const maxDisc = Number(user?.maxDiscountPercent) || 0;
+  const canEditPrice = isAdmin || !!user?.canEditPrice;
+
   const filtered = useMemo(() => {
     let list = products;
     if (activeCat) list = list.filter((p) => p.categoryId === activeCat);
@@ -170,7 +175,12 @@ export default function POS() {
     setBuffer("");
     setFresh(true);
   };
-  const changeMode = (m) => { setMode(m); setBuffer(""); setFresh(true); };
+  const changeMode = (m) => {
+    if (m === "PRICE" && !canEditPrice) return toast.error("Нет прав менять цену");
+    if (m === "PERCENT" && !isAdmin && maxDisc <= 0) return toast.error("Скидки запрещены");
+    if (m === "PERCENT" && !isAdmin) toast("Макс. скидка: " + maxDisc + "%", { icon: "ℹ️" });
+    setMode(m); setBuffer(""); setFresh(true);
+  };
 
   const applyBuffer = (b) => {
     if (!selectedItem) return;
@@ -178,8 +188,10 @@ export default function POS() {
     if (mode === "QTY") patchItem(selectedItem.id, { quantity: Math.max(0, Math.round(num)) });
     else if (mode === "PRICE") patchItem(selectedItem.id, { price: Math.max(0, num) });
     else if (mode === "PERCENT") {
+      let pct = num;
+      if (!isAdmin) pct = Math.min(Math.max(0, pct), maxDisc); // лимит скидки продавца
       const base = Number(selectedItem.product?.sellPrice) || Number(selectedItem.price) || 0;
-      patchItem(selectedItem.id, { price: Math.max(0, Math.round(base * (1 - num / 100))) });
+      patchItem(selectedItem.id, { price: Math.max(0, Math.round(base * (1 - pct / 100))) });
     }
   };
 
@@ -197,13 +209,14 @@ export default function POS() {
 
   const modeValue = (m) => {
     if (!selectedItem) return "";
-    if (mode === m && !fresh && buffer !== "") return buffer;
-    if (m === "QTY") return String(selectedItem.quantity);
-    if (m === "PRICE") return fmt(selectedItem.price);
+    // Для % всегда показываем фактическую скидку из цены (учитывает лимит-кламп)
     if (m === "PERCENT") {
       const base = Number(selectedItem.product?.sellPrice) || 0;
       return base > 0 ? String(Math.round((1 - Number(selectedItem.price) / base) * 100)) : "0";
     }
+    if (mode === m && !fresh && buffer !== "") return buffer;
+    if (m === "QTY") return String(selectedItem.quantity);
+    if (m === "PRICE") return fmt(selectedItem.price);
     return "";
   };
 
@@ -502,11 +515,11 @@ export default function POS() {
               <NumKey onClick={() => press("4")}>4</NumKey>
               <NumKey onClick={() => press("5")}>5</NumKey>
               <NumKey onClick={() => press("6")}>6</NumKey>
-              <ModeKey active={mode === "PERCENT"} onClick={() => changeMode("PERCENT")} label="%" value={mode === "PERCENT" ? modeValue("PERCENT") : ""} />
+              <ModeKey active={mode === "PERCENT"} onClick={() => changeMode("PERCENT")} label="%" value={mode === "PERCENT" ? modeValue("PERCENT") : ""} locked={!isAdmin && maxDisc <= 0} />
               <NumKey onClick={() => press("7")}>7</NumKey>
               <NumKey onClick={() => press("8")}>8</NumKey>
               <NumKey onClick={() => press("9")}>9</NumKey>
-              <ModeKey active={mode === "PRICE"} onClick={() => changeMode("PRICE")} label="Цена" value={mode === "PRICE" ? modeValue("PRICE") : ""} />
+              <ModeKey active={mode === "PRICE"} onClick={() => changeMode("PRICE")} label="Цена" value={mode === "PRICE" ? modeValue("PRICE") : ""} locked={!canEditPrice} />
               <button onClick={() => press("pm")} className="h-14 flex items-center justify-center text-lg font-semibold bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-300 hover:bg-amber-200 dark:hover:bg-amber-500/30 transition">+/−</button>
               <NumKey onClick={() => press("0")}>0</NumKey>
               <button onClick={() => press(",")} className="h-14 flex items-center justify-center text-xl font-semibold bg-rose-100 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 hover:bg-rose-200 dark:hover:bg-rose-500/25 transition">,</button>
@@ -737,10 +750,10 @@ function QuickKey({ children, onClick }) {
 }
 
 /* ===== Кнопка-режим (Кол-во / % / Цена) ===== */
-function ModeKey({ active, onClick, label, value }) {
+function ModeKey({ active, onClick, label, value, locked }) {
   return (
-    <button onClick={onClick} className={"h-14 flex flex-col items-center justify-center text-sm font-semibold transition " + (active ? "bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-300 ring-2 ring-inset ring-teal-500" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700")}>
-      <span>{label}</span>
+    <button onClick={onClick} className={"h-14 flex flex-col items-center justify-center text-sm font-semibold transition " + (locked ? "opacity-40 " : "") + (active ? "bg-teal-50 dark:bg-teal-500/15 text-teal-600 dark:text-teal-300 ring-2 ring-inset ring-teal-500" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700")}>
+      <span>{label}{locked ? " 🔒" : ""}</span>
       {active && value !== "" && <span className="text-xs font-bold tabular-nums opacity-80">{value}</span>}
     </button>
   );

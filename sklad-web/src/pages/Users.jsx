@@ -15,6 +15,7 @@ function UserDetailModal({ user, onEdit, onClose }) {
 
   useEffect(() => {
     if (!user) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setLoading(true);
     setSales([]);
     setAllTotal(0);
@@ -114,7 +115,7 @@ export default function Users() {
   const [selected, setSelected] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [form, setForm] = useState({ name: "", phone: "", password: "", role: "SELLER" });
+  const [form, setForm] = useState({ name: "", phone: "", password: "", role: "SELLER", maxDiscountPercent: 0, canEditPrice: false });
 
   const load = async () => {
     setLoading(true);
@@ -123,10 +124,11 @@ export default function Users() {
     setLoading(false);
   };
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", phone: "", password: "", role: "SELLER" }); setImageFile(null); setImagePreview(null); setModal(true); };
-  const openEdit = (u) => { setEditing(u); setForm({ name: u.name, phone: u.phone, password: "", role: u.role }); setImageFile(null); setImagePreview(u.imageUrl || null); setModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ name: "", phone: "", password: "", role: "SELLER", maxDiscountPercent: 0, canEditPrice: false }); setImageFile(null); setImagePreview(null); setModal(true); };
+  const openEdit = (u) => { setEditing(u); setForm({ name: u.name, phone: u.phone, password: "", role: u.role, maxDiscountPercent: u.maxDiscountPercent ?? 0, canEditPrice: u.canEditPrice ?? false }); setImageFile(null); setImagePreview(u.imageUrl || null); setModal(true); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -217,6 +219,15 @@ export default function Users() {
           <Input label="Telefon" value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="+998901234567" required />
           <Input label={editing ? "Yangi parol (ixtiyoriy)" : "Parol"} type="password" value={form.password} onChange={e => setForm({...form, password: e.target.value})} required={!editing} />
           <Select label="Rol" value={form.role} onChange={e => setForm({...form, role: e.target.value})} options={ROLE_OPTIONS} />
+          {form.role !== "ADMIN" && (
+            <div className="grid grid-cols-2 gap-3 p-3 rounded-lg bg-slate-50 dark:bg-slate-700/40">
+              <Input label="Макс. скидка %" type="number" value={form.maxDiscountPercent} onChange={e => setForm({...form, maxDiscountPercent: e.target.value})} />
+              <label className="flex items-center gap-2 text-sm text-slate-700 dark:text-slate-300 self-end pb-2 cursor-pointer">
+                <input type="checkbox" checked={form.canEditPrice} onChange={e => setForm({...form, canEditPrice: e.target.checked})} className="w-4 h-4 accent-indigo-600" />
+                Может менять цену
+              </label>
+            </div>
+          )}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Rasm</label>
             <input type="file" accept="image/*" onChange={e => { const file = e.target.files[0]; if (!file) return; setImageFile(file); setImagePreview(URL.createObjectURL(file)); }} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />

@@ -26,7 +26,7 @@ export const login = async (phone, password, req = null) => {
   const tokens = generateTokens(user);
   await prisma.refreshToken.create({ data: { token: tokens.refreshToken, userId: user.id } });
   await audit(user.id, "LOGIN", "User", user.id, null, null, req);
-  return { ...tokens, user: { id: user.id, name: user.name, role: user.role, phone: user.phone } };
+  return { ...tokens, user: { id: user.id, name: user.name, role: user.role, phone: user.phone, maxDiscountPercent: user.maxDiscountPercent, canEditPrice: user.canEditPrice } };
 };
 
 export const refresh = async (token) => {

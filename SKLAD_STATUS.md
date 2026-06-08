@@ -97,13 +97,14 @@
 ### БОСКИЧ 5 — Админ (частично)
 - ✅ **Админ-просмотр смен** — `sklad-web/src/pages/Sessions.jsx` (роут `/sessions`, пункт меню «Смены»). Таблица смен, фильтр Все/Открытые/Закрытые, детали (открытие, продажи, ожидаемо/подсчитано/разница, приход-расход, продажи смены). API `GET /sessions` [admin].
 - ✅ **Low-stock исправлен**: бэкенд `GET /analytics/low-stock` (по полю `minStock`, а не хардкод 10), `lowStockCount` в дашборде считается правильно; Dashboard грузит полный список (был баг — брал только первые 5 товаров).
-- ⬜ Dashboard (KPI+график+топ) — есть `Dashboard.jsx`, работает.
-- ⬜ Users (управление продавцами, лимиты) — есть `Users.jsx`.
-- ⬜ Settings — есть `Settings.jsx`.
+- ✅ Dashboard (KPI+график+топ+low-stock) — `Dashboard.jsx`, работает.
+- ✅ **Лимиты продавца** (acceptance №16) — поля `User.maxDiscountPercent`, `User.canEditPrice` (db push в prod). В POS: продавец без `canEditPrice` не может менять цену (режим «Цена» 🔒), скидка ограничена `maxDiscountPercent` (клампится). Логин отдаёт поля. В `Users.jsx` — поля управления для не-админа.
+- ✅ Товар (БОСКИЧ 4) — `Products.jsx` уже полноценный: форма (фото/штрихкод/цены/остаток/minStock), каталог, low-stock индикация.
+- ⬜ Settings — есть `Settings.jsx`, работает.
 
-### Дальше — БОСКИЧ 4: товар/склад (ProductFormModal, StockReceipt, low-stock); БОСКИЧ 6–8: дизайн (тёмная тема всего приложения), mobile, desktop. См. `tz,plan/SKLAD_TZ.md` раздел 11.
+### Дальше — БОСКИЧ 6–8: единый дизайн (тёмная тема всего приложения, перевод админ-страниц на русский), mobile (Expo), desktop (Electron). StockReceipt (партийная приёмка) — опционально, дублирует существующий StockIn. SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
 
-> Многие пункты дальше требуют миграций Prisma (CashSession, Payment[], Client.totalDue, Sale.number/note, StockReceipt, расширение User/Product/Category по ТЗ §2). Все они упираются в одно решение — можно ли пушить схему в prod Railway. До этого двигаюсь только по фронтенд-задачам на текущих моделях.
+> Все плановые миграции выполнены через `db push` в prod (только добавления): CashSession, CashMovement, Sale.sessionId, User.maxDiscountPercent/canEditPrice. Долг клиента — агрегатом (без колонки). Остаются по ТЗ §2 (опционально): Payment[] (раздельный учёт оплат), Sale.number/note, StockReceipt.
 
 ---
 

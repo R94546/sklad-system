@@ -6,7 +6,7 @@ import { PrismaPg } from '@prisma/adapter-pg';
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
 const prisma = new PrismaClient({ adapter });
 
-const select = { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true, imageUrl: true };
+const select = { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true, imageUrl: true, maxDiscountPercent: true, canEditPrice: true };
 
 export const getAll = async () => {
   return prisma.user.findMany({ select, orderBy: { createdAt: 'desc' } });
@@ -27,6 +27,8 @@ export const create = async (data) => {
       phone: data.phone.trim(),
       password: hashed,
       role: data.role || 'SELLER',
+      maxDiscountPercent: Number(data.maxDiscountPercent) || 0,
+      canEditPrice: Boolean(data.canEditPrice),
     },
     select,
   });
@@ -40,6 +42,8 @@ export const update = async (id, data) => {
   if (data.role) updateData.role = data.role;
   if (data.isActive !== undefined) updateData.isActive = Boolean(data.isActive);
   if (data.imageUrl !== undefined) updateData.imageUrl = data.imageUrl;
+  if (data.maxDiscountPercent !== undefined) updateData.maxDiscountPercent = Number(data.maxDiscountPercent) || 0;
+  if (data.canEditPrice !== undefined) updateData.canEditPrice = Boolean(data.canEditPrice);
   return prisma.user.update({ where: { id }, data: updateData, select });
 };
 
