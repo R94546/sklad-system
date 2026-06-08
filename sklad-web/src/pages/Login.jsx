@@ -1,4 +1,4 @@
-﻿import { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import api from '../api/axios';
 import useAuthStore from '../store/authStore';
@@ -17,10 +17,10 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { phone, password });
       login(res.data.data);
-      toast.success('Xush kelibsiz!');
+      toast.success('Добро пожаловать!');
       navigate('/');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Xatolik');
+      toast.error(err.response?.data?.message || 'Ошибка');
     } finally {
       setLoading(false);
     }
@@ -29,10 +29,10 @@ export default function Login() {
   return (
     <div className="min-h-screen bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
       <div className="bg-white p-8 rounded-xl shadow-md w-full max-w-md">
-        <h1 className="text-2xl font-bold text-center mb-6 text-slate-800 dark:text-slate-200">Sklad tizimi</h1>
+        <h1 className="text-2xl font-bold text-center mb-6 text-slate-800">Система Sklad</h1>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Телефон</label>
             <input
               type="text"
               value={phone}
@@ -43,12 +43,12 @@ export default function Login() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Parol</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
             <input
               type="password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ"
+              placeholder="••••••"
               className="w-full border border-slate-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               required
             />
@@ -56,15 +56,12 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-blue-700 disabled:opacity-50 font-medium"
+            className="w-full bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 disabled:opacity-50 font-medium"
           >
-            {loading ? 'Kirish...' : 'Kirish'}
+            {loading ? 'Вход...' : 'Войти'}
           </button>
         </form>
       </div>
     </div>
   );
 }
-
-
-
