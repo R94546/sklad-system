@@ -1,5 +1,5 @@
-﻿import { useEffect, useState } from "react";
-import { Plus, Edit, Trash2, Package, X, ShoppingCart, Barcode, Scan, RefreshCw } from "lucide-react";
+import { useEffect, useState } from "react";
+import { Plus, Edit, Trash2, Package, X, ShoppingCart, Scan, RefreshCw } from "lucide-react";
 import useCartStore from "../store/cartStore";
 import AddToCartModal from "../components/AddToCartModal";
 import BarcodeScanner from "../components/BarcodeScanner";
@@ -8,7 +8,7 @@ import EmptyState from "../components/EmptyState";
 import api from "../api/axios";
 import { Button, Input, Select, Modal, Badge } from "../components/ui";
 
-const UNITS = { PIECE: "dona", KG: "kg", METER: "metr", LITER: "litr", BOX: "quti" };
+const UNITS = { PIECE: "шт", KG: "кг", METER: "м", LITER: "л", BOX: "кор" };
 const UNIT_OPTIONS = Object.entries(UNITS).map(([value, label]) => ({ value, label }));
 
 function ProductDetailModal({ product, onEdit, onDelete, onClose }) {
@@ -24,7 +24,7 @@ function ProductDetailModal({ product, onEdit, onDelete, onClose }) {
       <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white dark:bg-slate-800 rounded-xl shadow-xl w-full max-w-md animate-fade-in">
         <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-700">
-          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">Mahsulot tafsiloti</h2>
+          <h2 className="text-lg font-semibold text-slate-800 dark:text-white">О товаре</h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"><X size={20} /></button>
         </div>
         <div className="p-5 space-y-4">
@@ -46,39 +46,39 @@ function ProductDetailModal({ product, onEdit, onDelete, onClose }) {
           </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
-              <p className="text-xs text-slate-400 mb-1">Sotish narxi</p>
-              <p className="font-bold text-slate-800 dark:text-white">{Number(product.sellPrice).toLocaleString()} som</p>
+              <p className="text-xs text-slate-400 mb-1">Цена продажи</p>
+              <p className="font-bold text-slate-800 dark:text-white">{Number(product.sellPrice).toLocaleString("ru-RU")} сом</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
-              <p className="text-xs text-slate-400 mb-1">Kirim narxi</p>
-              <p className="font-bold text-slate-800 dark:text-white">{Number(product.buyPrice).toLocaleString()} som</p>
+              <p className="text-xs text-slate-400 mb-1">Цена прихода</p>
+              <p className="font-bold text-slate-800 dark:text-white">{Number(product.buyPrice).toLocaleString("ru-RU")} сом</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
-              <p className="text-xs text-slate-400 mb-1">Qoldiq</p>
+              <p className="text-xs text-slate-400 mb-1">Остаток</p>
               <p className="font-bold text-slate-800 dark:text-white">{product.quantity} {UNITS[product.unit]}</p>
             </div>
             <div className="bg-slate-50 dark:bg-slate-700 rounded-lg p-3">
-              <p className="text-xs text-slate-400 mb-1">Minimal qoldiq</p>
+              <p className="text-xs text-slate-400 mb-1">Мин. остаток</p>
               <p className="font-bold text-slate-800 dark:text-white">{product.minStock} {UNITS[product.unit]}</p>
             </div>
             <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg p-3 col-span-2">
-              <p className="text-xs text-slate-400 mb-1">Umumiy qiymat</p>
-              <p className="font-bold text-indigo-600 dark:text-indigo-400">{(Number(product.sellPrice) * product.quantity).toLocaleString()} som</p>
+              <p className="text-xs text-slate-400 mb-1">Общая стоимость</p>
+              <p className="font-bold text-indigo-600 dark:text-indigo-400">{(Number(product.sellPrice) * product.quantity).toLocaleString("ru-RU")} сом</p>
             </div>
           </div>
           {barcodeImg && (
             <div className="bg-white dark:bg-slate-700 rounded-lg p-3 flex flex-col items-center gap-2">
-              <p className="text-xs text-slate-400">Barcode</p>
+              <p className="text-xs text-slate-400">Штрихкод</p>
               <img src={barcodeImg} alt="barcode" className="h-16" />
               <p className="text-xs font-mono text-slate-500">{product.barcode}</p>
             </div>
           )}
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={() => { onClose(); onEdit(product); }}>
-              <Edit size={15} /> Tahrirlash
+              <Edit size={15} /> Редактировать
             </Button>
             <Button variant="danger" className="flex-1" onClick={() => { onClose(); onDelete(product.id); }}>
-              <Trash2 size={15} /> Ochirish
+              <Trash2 size={15} /> Удалить
             </Button>
           </div>
         </div>
@@ -108,11 +108,12 @@ export default function Products() {
   const load = async () => {
     setLoading(true);
     try { const res = await api.get("/products?search=" + search); setProducts(res.data.data.data); }
-    catch { toast.error("Xatolik"); }
+    catch { toast.error("Ошибка"); }
     setLoading(false);
   };
 
   useEffect(() => { api.get("/categories").then(r => setCategories(r.data.data)); }, []);
+  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
   useEffect(() => { load(); }, [search]);
 
   const handleImageChange = (e) => {
@@ -127,8 +128,8 @@ export default function Products() {
     try {
       const res = await api.get("/barcode/generate");
       setForm(f => ({ ...f, barcode: res.data.data.barcode }));
-      toast.success("Barcode yaratildi");
-    } catch { toast.error("Xatolik"); }
+      toast.success("Штрихкод создан");
+    } catch { toast.error("Ошибка"); }
     setGeneratingBarcode(false);
   };
 
@@ -138,7 +139,7 @@ export default function Products() {
       const res = await api.get("/barcode/scan/" + barcode);
       setSelected(res.data.data);
     } catch {
-      toast.error("Tovar topilmadi: " + barcode);
+      toast.error("Товар не найден: " + barcode);
       setSearch(barcode);
     }
   };
@@ -170,17 +171,17 @@ export default function Products() {
         const uploadRes = await api.post("/upload", formData, { headers: { "Content-Type": "multipart/form-data" } });
         imageUrl = uploadRes.data.data.url;
       }
-      if (editing) { await api.put("/products/" + editing.id, { ...form, imageUrl }); toast.success("Yangilandi"); }
-      else { await api.post("/products", { ...form, imageUrl }); toast.success("Yaratildi"); }
+      if (editing) { await api.put("/products/" + editing.id, { ...form, imageUrl }); toast.success("Обновлено"); }
+      else { await api.post("/products", { ...form, imageUrl }); toast.success("Создано"); }
       setModal(false); setImageFile(null); setImagePreview(null); load();
-    } catch (err) { toast.error(err.response?.data?.message || "Xatolik"); }
+    } catch (err) { toast.error(err.response?.data?.message || "Ошибка"); }
     setSaving(false);
   };
 
   const handleDelete = async (id) => {
-    if (!confirm("Ochirmoqchimisiz?")) return;
-    try { await api.delete("/products/" + id); toast.success("Ochirildi"); load(); }
-    catch { toast.error("Xatolik"); }
+    if (!confirm("Удалить товар?")) return;
+    try { await api.delete("/products/" + id); toast.success("Удалено"); load(); }
+    catch { toast.error("Ошибка"); }
   };
 
   const categoryOptions = categories.map(c => ({ value: c.id, label: c.name }));
@@ -188,14 +189,14 @@ export default function Products() {
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Mahsulotlar</h1>
-        <Button onClick={openCreate}><Plus size={16} /> Qoshish</Button>
+        <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Товары</h1>
+        <Button onClick={openCreate}><Plus size={16} /> Добавить</Button>
       </div>
 
       <div className="flex gap-2">
-        <Input placeholder="Qidirish..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
+        <Input placeholder="Поиск..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
         <Button variant="outline" onClick={() => { setScannerTarget("search"); setShowScanner(true); }}>
-          <Scan size={16} /> Skaner
+          <Scan size={16} /> Сканер
         </Button>
       </div>
 
@@ -204,7 +205,7 @@ export default function Products() {
           <table className="w-full text-sm">
             <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
               <tr>
-                {["Nomi", "Narxi", "Qoldiq", ""].map((h, i) => (
+                {["Название", "Цена", "Остаток", ""].map((h, i) => (
                   <th key={i} className={"px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider " + (i >= 1 ? "text-right" : "text-left")}>{h}</th>
                 ))}
               </tr>
@@ -213,7 +214,7 @@ export default function Products() {
               {loading ? (
                 <tr><td colSpan={6} className="px-4 py-8 text-center"><div className="animate-spin h-6 w-6 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto" /></td></tr>
               ) : products.length === 0 ? (
-                <tr><td colSpan={99} className="py-2"><EmptyState type="products" title="Mahsulotlar topilmadi" desc="Yangi mahsulot qoshish uchun + tugmasini bosing" /></td></tr>
+                <tr><td colSpan={99} className="py-2"><EmptyState type="products" title="Товары не найдены" desc="Нажмите + чтобы добавить товар" /></td></tr>
               ) : products.map(p => (
                 <tr key={p.id} onClick={() => setSelected(p)} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
                   <td className="px-4 py-3">
@@ -225,7 +226,7 @@ export default function Products() {
                       </div>
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-800 dark:text-white">{Number(p.sellPrice).toLocaleString()} som</td>
+                  <td className="px-4 py-3 text-right font-medium text-slate-800 dark:text-white">{Number(p.sellPrice).toLocaleString("ru-RU")} сом</td>
                   <td className="px-4 py-3 text-right"><Badge variant={p.quantity <= p.minStock ? "red" : "green"}>{p.quantity} {UNITS[p.unit]}</Badge></td>
                   <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
                     <button onClick={() => setCartProduct(p)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg">
@@ -246,42 +247,42 @@ export default function Products() {
         />
       )}
 
-      {cartProduct && <AddToCartModal product={cartProduct} onClose={() => setCartProduct(null)} onAdd={async (productId, quantity) => { const ok = await addToCart(productId, quantity); if (ok) toast.success(cartProduct.name + " savatga qoshildi"); else toast.error("Xatolik"); }} />}
+      {cartProduct && <AddToCartModal product={cartProduct} onClose={() => setCartProduct(null)} onAdd={async (productId, quantity) => { const ok = await addToCart(productId, quantity); if (ok) toast.success(cartProduct.name + " добавлен в корзину"); else toast.error("Ошибка"); }} />}
       <ProductDetailModal product={selected} onClose={() => setSelected(null)} onEdit={openEdit} onDelete={handleDelete} />
 
-      <Modal open={modal} onClose={() => setModal(false)} title={editing ? "Mahsulotni tahrirlash" : "Yangi mahsulot"}>
+      <Modal open={modal} onClose={() => setModal(false)} title={editing ? "Редактировать товар" : "Новый товар"}>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <Input label="Nomi" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
-          <Select label="Kategoriya" value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})} options={categoryOptions} placeholder="Kategoriya tanlang" required />
+          <Input label="Название" value={form.name} onChange={e => setForm({...form, name: e.target.value})} required />
+          <Select label="Категория" value={form.categoryId} onChange={e => setForm({...form, categoryId: e.target.value})} options={categoryOptions} placeholder="Выберите категорию" required />
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Kirim narxi" type="number" value={form.buyPrice} onChange={e => setForm({...form, buyPrice: e.target.value})} required />
-            <Input label="Sotish narxi" type="number" value={form.sellPrice} onChange={e => setForm({...form, sellPrice: e.target.value})} required />
+            <Input label="Цена прихода" type="number" value={form.buyPrice} onChange={e => setForm({...form, buyPrice: e.target.value})} required />
+            <Input label="Цена продажи" type="number" value={form.sellPrice} onChange={e => setForm({...form, sellPrice: e.target.value})} required />
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Miqdor" type="number" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
-            <Select label="Birlik" value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} options={UNIT_OPTIONS} />
+            <Input label="Количество" type="number" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
+            <Select label="Единица" value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} options={UNIT_OPTIONS} />
           </div>
-          <Input label="Minimal qoldiq" type="number" value={form.minStock} onChange={e => setForm({...form, minStock: e.target.value})} />
+          <Input label="Мин. остаток" type="number" value={form.minStock} onChange={e => setForm({...form, minStock: e.target.value})} />
           <div className="space-y-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Barcode</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Штрихкод</label>
             <div className="flex gap-2">
-              <Input value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} placeholder="Barcode (ixtiyoriy)" className="flex-1" />
-              <Button type="button" variant="outline" onClick={() => { setScannerTarget("form"); setShowScanner(true); }} title="Skaner">
+              <Input value={form.barcode} onChange={e => setForm({...form, barcode: e.target.value})} placeholder="Штрихкод (необязательно)" className="flex-1" />
+              <Button type="button" variant="outline" onClick={() => { setScannerTarget("form"); setShowScanner(true); }} title="Сканер">
                 <Scan size={15} />
               </Button>
-              <Button type="button" variant="outline" onClick={generateBarcode} loading={generatingBarcode} title="Generatsiya">
+              <Button type="button" variant="outline" onClick={generateBarcode} loading={generatingBarcode} title="Сгенерировать">
                 <RefreshCw size={15} />
               </Button>
             </div>
           </div>
           <div className="flex flex-col gap-1">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Rasm</label>
+            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Фото</label>
             <input type="file" accept="image/*" onChange={handleImageChange} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
             {imagePreview && <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg mt-1" />}
           </div>
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setModal(false)}>Bekor</Button>
-            <Button type="submit" className="flex-1" loading={saving}>Saqlash</Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => setModal(false)}>Отмена</Button>
+            <Button type="submit" className="flex-1" loading={saving}>Сохранить</Button>
           </div>
         </form>
       </Modal>
