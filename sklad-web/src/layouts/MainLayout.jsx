@@ -8,20 +8,20 @@ import useCartStore from "../store/cartStore";
 import { useEffect } from "react";
 
 const navItems = [
-  { path: "/", icon: LayoutDashboard, label: "Dashboard" },
-  { path: "/products", icon: Package, label: "Mahsulotlar" },
-  { path: "/stockin", icon: PackagePlus, label: "Kirim", adminOnly: true },
-  { path: "/kassa", icon: Landmark, label: "Kassa", kassirOnly: true },
-  { path: "/pos", icon: ShoppingCart, label: "Savdo (POS)" },
-  { path: "/sales", icon: ShoppingCart, label: "Sotuvlar" },
-  { path: "/clients", icon: Users, label: "Mijozlar" },
-  { path: "/debts", icon: CreditCard, label: "Nasiyalar" },
+  { path: "/", icon: LayoutDashboard, label: "Панель" },
+  { path: "/products", icon: Package, label: "Товары" },
+  { path: "/stockin", icon: PackagePlus, label: "Приём", adminOnly: true },
+  { path: "/kassa", icon: Landmark, label: "Касса", kassirOnly: true },
+  { path: "/pos", icon: ShoppingCart, label: "Продажа (POS)" },
+  { path: "/sales", icon: ShoppingCart, label: "Продажи" },
+  { path: "/clients", icon: Users, label: "Клиенты" },
+  { path: "/debts", icon: CreditCard, label: "Долги" },
   { path: "/sessions", icon: Wallet, label: "Смены", adminOnly: true },
-  { path: "/analytics", icon: BarChart2, label: "Analitika", adminOnly: true },
-  { path: "/categories", icon: Tag, label: "Kategoriyalar", adminOnly: true },
-  { path: "/users", icon: UserCog, label: "Foydalanuvchilar", adminOnly: true },
-  { path: "/audit", icon: ClipboardList, label: "Audit log", adminOnly: true },
-  { path: "/settings", icon: Settings, label: "Sozlamalar", adminOnly: true },
+  { path: "/analytics", icon: BarChart2, label: "Аналитика", adminOnly: true },
+  { path: "/categories", icon: Tag, label: "Категории", adminOnly: true },
+  { path: "/users", icon: UserCog, label: "Пользователи", adminOnly: true },
+  { path: "/audit", icon: ClipboardList, label: "Журнал", adminOnly: true },
+  { path: "/settings", icon: Settings, label: "Настройки", adminOnly: true },
 ];
 
 export default function MainLayout({ children }) {
@@ -36,7 +36,7 @@ export default function MainLayout({ children }) {
 
   const handleLogout = () => {
     logout();
-    toast.success("Chiqildi");
+    toast.success("Вы вышли");
     navigate("/login");
   };
 
@@ -49,7 +49,7 @@ export default function MainLayout({ children }) {
           </div>
           <div>
             <h1 className="text-lg font-bold text-white tracking-tight">Sklad</h1>
-            <p className="text-xs text-slate-400">{user?.role === "ADMIN" ? "Administrator" : "Sotuvchi"}</p>
+            <p className="text-xs text-slate-400">{user?.role === "ADMIN" ? "Администратор" : "Продавец"}</p>
           </div>
         </div>
 
@@ -86,7 +86,7 @@ export default function MainLayout({ children }) {
           </div>
           <button onClick={handleLogout} className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-slate-400 hover:text-red-400 hover:bg-red-500/10 w-full transition-all">
             <LogOut size={18} />
-            Chiqish
+            Выход
           </button>
         </div>
       </aside>

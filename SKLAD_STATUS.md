@@ -102,7 +102,12 @@
 - ✅ Товар (БОСКИЧ 4) — `Products.jsx` уже полноценный: форма (фото/штрихкод/цены/остаток/minStock), каталог, low-stock индикация.
 - ⬜ Settings — есть `Settings.jsx`, работает.
 
-### Дальше — БОСКИЧ 6–8: единый дизайн (тёмная тема всего приложения, перевод админ-страниц на русский), mobile (Expo), desktop (Electron). StockReceipt (партийная приёмка) — опционально, дублирует существующий StockIn. SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
+### БОСКИЧ 6 — Русификация интерфейса (в процессе)
+- ✅ Меню/сайдбар (`MainLayout`) — на русском.
+- ✅ `Dashboard.jsx` — на русском (валюта «сом», формат ru-RU).
+- ⬜ Остальные страницы: Products, Clients, Debts, Sales, Settings, Categories, StockIn, Kassa, Login, Cart — перевести.
+
+### Дальше — БОСКИЧ 7–8: mobile (Expo), desktop (Electron). StockReceipt (партийная приёмка) — опционально, дублирует существующий StockIn. SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
 
 > Все плановые миграции выполнены через `db push` в prod (только добавления): CashSession, CashMovement, Sale.sessionId, User.maxDiscountPercent/canEditPrice. Долг клиента — агрегатом (без колонки). Остаются по ТЗ §2 (опционально): Payment[] (раздельный учёт оплат), Sale.number/note, StockReceipt.
 
