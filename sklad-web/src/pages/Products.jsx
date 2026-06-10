@@ -113,8 +113,12 @@ export default function Products() {
   };
 
   useEffect(() => { api.get("/categories").then(r => setCategories(r.data.data)); }, []);
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
-  useEffect(() => { load(); }, [search]);
+  // Debounce: запрос только через 350мс после последнего ввода
+  useEffect(() => {
+    const t = setTimeout(load, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -258,6 +262,9 @@ export default function Products() {
             <Input label="Цена прихода" type="number" value={form.buyPrice} onChange={e => setForm({...form, buyPrice: e.target.value})} required />
             <Input label="Цена продажи" type="number" value={form.sellPrice} onChange={e => setForm({...form, sellPrice: e.target.value})} required />
           </div>
+          {form.buyPrice !== "" && form.sellPrice !== "" && Number(form.sellPrice) < Number(form.buyPrice) && (
+            <p className="text-xs text-amber-500">⚠ Цена продажи ниже цены прихода — продажа в убыток</p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <Input label="Количество" type="number" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
             <Select label="Единица" value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} options={UNIT_OPTIONS} />

@@ -5,6 +5,8 @@ import toast from 'react-hot-toast';
 import { Button, Input, Select, Modal, Table } from '../components/ui';
 import BarcodeScanner from '../components/BarcodeScanner';
 
+const UNITS = { PIECE: 'шт', KG: 'кг', METER: 'м', LITER: 'л', BOX: 'кор' };
+
 export default function StockIn() {
   const [stockins, setStockins] = useState([]);
   const [products, setProducts] = useState([]);
@@ -74,7 +76,7 @@ export default function StockIn() {
   const columns = [
     { title: 'Дата', key: 'createdAt', render: (v) => <span className="text-gray-500 text-xs">{new Date(v).toLocaleDateString('ru-RU')}</span> },
     { title: 'Товар', key: 'product', render: (v) => <span className="font-medium">{v?.name}</span> },
-    { title: 'Кол-во', key: 'quantity', align: 'right', render: (v, row) => <span className="font-medium text-green-600">+{v} {row.product?.unit}</span> },
+    { title: 'Кол-во', key: 'quantity', align: 'right', render: (v, row) => <span className="font-medium text-green-600">+{v} {UNITS[row.product?.unit] || row.product?.unit}</span> },
     { title: 'Цена', key: 'price', align: 'right', render: (v) => <span>{Number(v).toLocaleString('ru-RU')} сом</span> },
     { title: 'Итого', key: 'price', align: 'right', render: (v, row) => <span className="font-bold">{(Number(v) * row.quantity).toLocaleString('ru-RU')} сом</span> },
     { title: 'Кто', key: 'user', render: (v) => <span className="text-slate-500 dark:text-slate-400">{v?.name}</span> },
