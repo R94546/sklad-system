@@ -1,9 +1,4 @@
-﻿import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+﻿import prisma from '../../config/db.js';
 
 export const getAll = async (query) => {
   const { page = 1, limit = 20, userId } = query;
@@ -42,8 +37,8 @@ return prisma.$transaction(async (tx) => {
 
     for (const item of normalizedItems) {
       const product = await tx.product.findUnique({ where: { id: item.productId } });
-      if (!product) throw { status: 404, message: 'Mahsulot topilmadi' };
-      if (product.quantity < item.quantity) throw { status: 400, message: product.name + ' yetarli emas (qoldiq: ' + product.quantity + ')' };
+      if (!product) throw { status: 404, message: 'Товар не найден' };
+      if (product.quantity < item.quantity) throw { status: 400, message: product.name + ': недостаточно на складе (остаток: ' + product.quantity + ')' };
       totalAmount += item.price * item.quantity;
     }
 
@@ -69,8 +64,8 @@ return prisma.$transaction(async (tx) => {
     }
 
     if (paymentType === 'DEBT' || paymentType === 'MIXED') {
-      if (!clientId) throw { status: 400, message: 'Nasiya uchun mijoz tanlansin' };
-      if (!data.dueDate) throw { status: 400, message: 'Nasiya muddati kiritilsin' };
+      if (!clientId) throw { status: 400, message: 'Для долга выберите клиента' };
+      if (!data.dueDate) throw { status: 400, message: 'Укажите срок долга' };
       const debtAmount = paymentType === 'MIXED' ? (Number(data.debtAmount) || finalAmount) : finalAmount;
       await tx.debt.create({
         data: {
@@ -89,14 +84,17 @@ return prisma.$transaction(async (tx) => {
 export const cancel = async (id) => {
   return prisma.$transaction(async (tx) => {
     const sale = await tx.sale.findUnique({ where: { id }, include: { items: true } });
-    if (!sale) throw { status: 404, message: 'Topilmadi' };
-    if (sale.status === 'CANCELLED') throw { status: 400, message: 'Allaqachon bekor qilingan' };
+    if (!sale) throw { status: 404, message: 'Не найдено' };
+    if (sale.status === 'CANCELLED') throw { status: 400, message: 'Уже отменён' };
 
-    for (const item of sale.items) {
-      await tx.product.update({
-        where: { id: item.productId },
-        data: { quantity: { increment: item.quantity } },
-      });
+    // Возврат остатка только если он был списан (завершённая продажа)
+    if (sale.status === 'COMPLETED') {
+      for (const item of sale.items) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { quantity: { increment: item.quantity } },
+        });
+      }
     }
 
     return tx.sale.update({ where: { id }, data: { status: 'CANCELLED' } });
@@ -104,14 +102,20 @@ export const cancel = async (id) => {
 };
 
 export const remove = async (id) => {
-  const sale = await prisma.sale.findUnique({ where: { id }, include: { items: true } });
-  if (!sale) throw { status: 404, message: 'Sotuv topilmadi' };
-  for (const item of sale.items) {
-    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
-  }
-  await prisma.saleItem.deleteMany({ where: { saleId: id } });
-  await prisma.sale.delete({ where: { id } });
-  return { success: true };
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({ where: { id }, include: { items: true } });
+    if (!sale) throw { status: 404, message: 'Продажа не найдена' };
+    // Возврат остатка только если он был списан (завершённая продажа)
+    if (sale.status === 'COMPLETED') {
+      for (const item of sale.items) {
+        await tx.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
+      }
+    }
+    await tx.debt.deleteMany({ where: { saleId: id } });
+    await tx.saleItem.deleteMany({ where: { saleId: id } });
+    await tx.sale.delete({ where: { id } });
+    return { success: true };
+  });
 };
 
 export const updateSale = async (id, data) => {
@@ -155,10 +159,10 @@ export const addToCart = async (userId, productId, quantity, price, saleId) => {
       ? prisma.sale.findFirst({ where: { id: saleId, userId, status: "PENDING" } })
       : prisma.sale.findFirst({ where: { userId, status: "PENDING" } }),
   ]);
-  if (!product) throw { status: 404, message: "Mahsulot topilmadi" };
+  if (!product) throw { status: 404, message: "Товар не найден" };
 
   let cart = foundCart;
-  if (saleId && !cart) throw { status: 404, message: "Savat topilmadi" };
+  if (saleId && !cart) throw { status: 404, message: "Корзина не найдена" };
   if (!cart) {
     cart = await prisma.sale.create({
       data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
@@ -185,9 +189,9 @@ export const addToCart = async (userId, productId, quantity, price, saleId) => {
 
 export const removeFromCart = async (userId, itemId) => {
   const item = await prisma.saleItem.findUnique({ where: { id: itemId } });
-  if (!item) throw { status: 404, message: "Pozitsiya topilmadi" };
+  if (!item) throw { status: 404, message: "Позиция не найдена" };
   const cart = await prisma.sale.findFirst({ where: { id: item.saleId, userId, status: "PENDING" } });
-  if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  if (!cart) throw { status: 404, message: "Корзина не найдена" };
   await prisma.saleItem.delete({ where: { id: itemId } });
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
   const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
@@ -195,35 +199,53 @@ export const removeFromCart = async (userId, itemId) => {
 };
 
 export const confirmCart = async (cartId, data) => {
-  const cart = await prisma.sale.findUnique({ where: { id: cartId }, include: { items: true } });
-  if (!cart) throw { status: 404, message: "Savat topilmadi" };
-  // Привязка к открытой смене продавца (если открыта)
-  const session = await prisma.cashSession.findFirst({ where: { sellerId: cart.userId, status: "OPEN" } });
-  for (const item of cart.items) {
-    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
-  }
-  const total = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-  const discountType = data.discountType || "AMOUNT";
-  const discountVal = Number(data.discount || 0);
-  const discountAmount = discountType === "PERCENT" ? (total * discountVal / 100) : discountVal;
-  const finalTotal = total - discountAmount;
-  const updated = await prisma.sale.update({
-    where: { id: cartId },
-    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: discountAmount, discountType: discountType, totalAmount: finalTotal, sessionId: session?.id || null, note: data.note || null },
-    include: { client: true, user: true, items: { include: { product: true } } }
+  // Вся операция атомарна: проверка остатков + списание + оформление + долг
+  return prisma.$transaction(async (tx) => {
+    const cart = await tx.sale.findUnique({ where: { id: cartId }, include: { items: { include: { product: true } } } });
+    if (!cart) throw { status: 404, message: "Корзина не найдена" };
+    if (cart.status !== "PENDING") throw { status: 400, message: "Чек уже оформлен" };
+    if (!cart.items.length) throw { status: 400, message: "Чек пуст" };
+
+    // Списание остатка атомарным условным запросом (защита от ухода в минус и гонки параллельных чеков)
+    for (const item of cart.items) {
+      const res = await tx.product.updateMany({
+        where: { id: item.productId, quantity: { gte: item.quantity } },
+        data: { quantity: { decrement: item.quantity } },
+      });
+      if (res.count === 0) {
+        throw { status: 400, message: `${item.product.name}: недостаточно на складе (остаток: ${item.product.quantity})` };
+      }
+    }
+
+    // Привязка к открытой смене продавца (если открыта)
+    const session = await tx.cashSession.findFirst({ where: { sellerId: cart.userId, status: "OPEN" } });
+
+    const total = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const discountType = data.discountType || "AMOUNT";
+    const discountVal = Number(data.discount || 0);
+    const discountAmount = discountType === "PERCENT" ? (total * discountVal / 100) : discountVal;
+    const finalTotal = total - discountAmount;
+
+    const updated = await tx.sale.update({
+      where: { id: cartId },
+      data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: discountAmount, discountType: discountType, totalAmount: finalTotal, sessionId: session?.id || null, note: data.note || null },
+      include: { client: true, user: true, items: { include: { product: true } } }
+    });
+
+    if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
+      const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
+      await tx.debt.create({ data: { saleId: cartId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
+    }
+
+    return updated;
   });
-  if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
-    const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
-    await prisma.debt.create({ data: { saleId: cartId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
-  }
-  return updated;
 };
 
 
 export const sendToKassa = async (saleId) => {
   const sale = await prisma.sale.findUnique({ where: { id: saleId } });
-  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
-  if (sale.status !== "PENDING") throw { status: 400, message: "Faqat savat holatidagi sotuvni kassaga yuborish mumkin" };
+  if (!sale) throw { status: 404, message: "Продажа не найдена" };
+  if (sale.status !== "PENDING") throw { status: 400, message: "На кассу можно отправить только чек в статусе корзины" };
   return prisma.sale.update({
     where: { id: saleId },
     data: { status: "SENT_TO_KASSA" },
@@ -240,46 +262,58 @@ export const getKassaQueue = async () => {
 };
 
 export const kassaConfirm = async (saleId, data) => {
-  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
-  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
-  if (sale.status !== "SENT_TO_KASSA") throw { status: 400, message: "Sotuv kassa navbatida emas" };
-  for (const item of sale.items) {
-    await prisma.product.update({ where: { id: item.productId }, data: { quantity: { decrement: item.quantity } } });
-  }
-  const total = sale.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
-  const finalTotal = total - Number(data.discount || 0);
-  const updated = await prisma.sale.update({
-    where: { id: saleId },
-    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: Number(data.discount || 0), totalAmount: finalTotal },
-    include: { client: true, user: true, items: { include: { product: true } } }
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({ where: { id: saleId }, include: { items: { include: { product: true } } } });
+    if (!sale) throw { status: 404, message: "Продажа не найдена" };
+    if (sale.status !== "SENT_TO_KASSA") throw { status: 400, message: "Продажа не в очереди кассы" };
+
+    for (const item of sale.items) {
+      const res = await tx.product.updateMany({
+        where: { id: item.productId, quantity: { gte: item.quantity } },
+        data: { quantity: { decrement: item.quantity } },
+      });
+      if (res.count === 0) {
+        throw { status: 400, message: `${item.product.name}: недостаточно на складе (остаток: ${item.product.quantity})` };
+      }
+    }
+
+    const total = sale.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const finalTotal = total - Number(data.discount || 0);
+    const updated = await tx.sale.update({
+      where: { id: saleId },
+      data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: Number(data.discount || 0), totalAmount: finalTotal },
+      include: { client: true, user: true, items: { include: { product: true } } }
+    });
+    if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
+      const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
+      await tx.debt.create({ data: { saleId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
+    }
+    return updated;
   });
-  if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
-    const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
-    await prisma.debt.create({ data: { saleId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
-  }
-  return updated;
 };
 
 export const kassaReturn = async (saleId, reason) => {
-  const sale = await prisma.sale.findUnique({ where: { id: saleId }, include: { items: true } });
-  if (!sale) throw { status: 404, message: "Sotuv topilmadi" };
-  if (sale.status === "COMPLETED") {
-    for (const item of sale.items) {
-      await prisma.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
+  return prisma.$transaction(async (tx) => {
+    const sale = await tx.sale.findUnique({ where: { id: saleId }, include: { items: true } });
+    if (!sale) throw { status: 404, message: "Продажа не найдена" };
+    if (sale.status === "COMPLETED") {
+      for (const item of sale.items) {
+        await tx.product.update({ where: { id: item.productId }, data: { quantity: { increment: item.quantity } } });
+      }
     }
-  }
-  return prisma.sale.update({
-    where: { id: saleId },
-    data: { status: "RETURNED", returnReason: reason || "" },
-    include: { client: true, user: true, items: { include: { product: true } } }
+    return tx.sale.update({
+      where: { id: saleId },
+      data: { status: "RETURNED", returnReason: reason || "" },
+      include: { client: true, user: true, items: { include: { product: true } } }
+    });
   });
 };
 
 export const updateCartItem = async (userId, itemId, quantity, price) => {
   const item = await prisma.saleItem.findUnique({ where: { id: itemId } });
-  if (!item) throw { status: 404, message: "Pozitsiya topilmadi" };
+  if (!item) throw { status: 404, message: "Позиция не найдена" };
   const cart = await prisma.sale.findFirst({ where: { id: item.saleId, userId, status: "PENDING" } });
-  if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  if (!cart) throw { status: 404, message: "Корзина не найдена" };
   if (quantity !== undefined) {
     const qty = parseInt(quantity);
     if (qty <= 0) { await prisma.saleItem.delete({ where: { id: itemId } }); }

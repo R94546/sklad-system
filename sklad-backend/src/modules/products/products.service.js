@@ -24,39 +24,44 @@ export const getByBarcode = async (barcode) => {
   return prisma.product.findUnique({ where: { barcode }, include: { category: true } });
 };
 
+const has = (v) => v !== undefined && v !== null && v !== "";
+
 export const create = async (data, file) => {
   let imageUrl = null;
   if (file) imageUrl = await uploadImage(file, "products");
   const barcode = data.barcode || await generateBarcode();
   return prisma.product.create({
     data: {
-      ...data,
+      name: data.name,
+      categoryId: data.categoryId,
+      unit: data.unit || "PIECE",
       barcode,
       buyPrice: Number(data.buyPrice),
       sellPrice: Number(data.sellPrice),
-      quantity: parseInt(data.quantity) || 0,
-      minStock: parseInt(data.minStock) || 10,
-      ...(imageUrl && { imageUrl }),
+      quantity: has(data.quantity) ? parseInt(data.quantity) : 0,
+      minStock: has(data.minStock) ? parseInt(data.minStock) : 10,
+      imageUrl: imageUrl ?? data.imageUrl ?? null,
     },
     include: { category: true },
   });
 };
 
 export const update = async (id, data, file) => {
-  let imageUrl = undefined;
+  let imageUrl;
   if (file) imageUrl = await uploadImage(file, "products");
-  return prisma.product.update({
-    where: { id },
-    data: {
-      ...data,
-      buyPrice: data.buyPrice ? Number(data.buyPrice) : undefined,
-      sellPrice: data.sellPrice ? Number(data.sellPrice) : undefined,
-      quantity: data.quantity ? parseInt(data.quantity) : undefined,
-      minStock: data.minStock ? parseInt(data.minStock) : undefined,
-      ...(imageUrl && { imageUrl }),
-    },
-    include: { category: true },
-  });
+  // Явные поля + проверка через has() — чтобы значения 0 (количество/мин.остаток) сохранялись
+  const d = {};
+  if (data.name !== undefined) d.name = data.name;
+  if (data.categoryId !== undefined) d.categoryId = data.categoryId;
+  if (data.unit !== undefined) d.unit = data.unit;
+  if (data.barcode !== undefined) d.barcode = data.barcode || null;
+  if (has(data.buyPrice)) d.buyPrice = Number(data.buyPrice);
+  if (has(data.sellPrice)) d.sellPrice = Number(data.sellPrice);
+  if (has(data.quantity)) d.quantity = parseInt(data.quantity);
+  if (has(data.minStock)) d.minStock = parseInt(data.minStock);
+  if (imageUrl !== undefined) d.imageUrl = imageUrl;
+  else if (data.imageUrl !== undefined) d.imageUrl = data.imageUrl;
+  return prisma.product.update({ where: { id }, data: d, include: { category: true } });
 };
 
 export const remove = async (id) => {
@@ -64,5 +69,7 @@ export const remove = async (id) => {
 };
 
 export const getLowStock = async () => {
-  return prisma.product.findMany({ where: { isActive: true }, include: { category: true } });
+  // Только товары с остатком <= минимума (сравнение двух полей Prisma where не умеет)
+  const products = await prisma.product.findMany({ where: { isActive: true }, include: { category: true } });
+  return products.filter((p) => p.quantity <= p.minStock).sort((a, b) => a.quantity - b.quantity);
 };

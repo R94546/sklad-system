@@ -1,9 +1,4 @@
-﻿import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+﻿import prisma from '../../config/db.js';
 
 export const getDashboard = async () => {
   const today = new Date();
@@ -77,43 +72,38 @@ export const getSalesChart = async (period = 'week') => {
 };
 
 export const getTopProducts = async () => {
+  // Только завершённые продажи (без корзин/отмен/возвратов)
   const items = await prisma.saleItem.findMany({
-    select: { productId: true, quantity: true, price: true },
+    where: { sale: { status: 'COMPLETED' } },
+    select: { productId: true, quantity: true, price: true, product: { select: { name: true, unit: true } } },
   });
   const grouped = {};
   for (const item of items) {
-    if (!grouped[item.productId]) grouped[item.productId] = { qty: 0, amount: 0 };
-    grouped[item.productId].qty += item.quantity;
-    grouped[item.productId].amount += Number(item.price) * item.quantity;
+    const g = grouped[item.productId] || (grouped[item.productId] = { name: item.product?.name || "Неизвестно", qty: 0, amount: 0 });
+    g.qty += item.quantity;
+    g.amount += Number(item.price) * item.quantity;
   }
-  const sorted = Object.entries(grouped).sort((a, b) => b[1].amount - a[1].amount).slice(0, 10);
-  const products = await Promise.all(sorted.map(async ([productId, data]) => {
-    const product = await prisma.product.findUnique({ where: { id: productId }, select: { name: true, unit: true } });
-    return { name: product?.name || "Noaniq", totalSold: data.qty, totalAmount: data.amount };
-  }));
-  return products;
+  return Object.values(grouped)
+    .map((g) => ({ name: g.name, totalSold: g.qty, totalAmount: g.amount }))
+    .sort((a, b) => b.totalAmount - a.totalAmount)
+    .slice(0, 10);
 };
 
 export const getTopProfitProducts = async () => {
-  const items = await prisma.saleItem.groupBy({
-    by: ['productId'],
-    _sum: { quantity: true },
-    orderBy: { _sum: { quantity: 'desc' } },
-    take: 10,
+  // Прибыль по фактической цене продажи (SaleItem.price) минус закупочная цена товара,
+  // только по завершённым продажам.
+  const items = await prisma.saleItem.findMany({
+    where: { sale: { status: 'COMPLETED' } },
+    select: { productId: true, quantity: true, price: true, product: { select: { name: true, buyPrice: true, unit: true } } },
   });
-  const products = await Promise.all(
-    items.map(async (item) => {
-      const product = await prisma.product.findUnique({
-        where: { id: item.productId },
-        select: { name: true, buyPrice: true, sellPrice: true, unit: true },
-      });
-      if (!product) return null;
-      const qty = item._sum.quantity || 0;
-      const profit = (Number(product.sellPrice) - Number(product.buyPrice)) * qty;
-      return { name: product.name, profit, qty, unit: product.unit };
-    })
-  );
-  return products.filter(Boolean).sort((a, b) => b.profit - a.profit);
+  const grouped = {};
+  for (const item of items) {
+    if (!item.product) continue;
+    const g = grouped[item.productId] || (grouped[item.productId] = { name: item.product.name, unit: item.product.unit, qty: 0, profit: 0 });
+    g.qty += item.quantity;
+    g.profit += (Number(item.price) - Number(item.product.buyPrice)) * item.quantity;
+  }
+  return Object.values(grouped).sort((a, b) => b.profit - a.profit).slice(0, 10);
 };
 
 
@@ -133,7 +123,7 @@ export const getSellerStats = async () => {
         where: { id: s.userId },
         select: { name: true },
       });
-      return { name: user?.name || 'Noaniq', totalAmount: s._sum.totalAmount, count: s._count };
+      return { name: user?.name || 'Неизвестно', totalAmount: s._sum.totalAmount, count: s._count };
     })
   );
 };
@@ -146,12 +136,12 @@ export const getSellerDashboard = async (userId) => {
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
   const [todaySales, monthSales, totalClients] = await Promise.all([
     prisma.sale.aggregate({
-      where: { userId, status: { in: ["COMPLETED", "PENDING"] }, createdAt: { gte: today, lt: tomorrow } },
+      where: { userId, status: "COMPLETED", createdAt: { gte: today, lt: tomorrow } },
       _sum: { totalAmount: true },
       _count: true,
     }),
     prisma.sale.aggregate({
-      where: { userId, status: { in: ["COMPLETED", "PENDING"] }, createdAt: { gte: monthStart } },
+      where: { userId, status: "COMPLETED", createdAt: { gte: monthStart } },
       _sum: { totalAmount: true },
       _count: true,
     }),
