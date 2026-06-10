@@ -142,7 +142,7 @@ export default function POS() {
   // ===== Товары → корзина =====
   const handleAdd = async (p) => {
     if (p.quantity <= 0) return toast.error(p.name + " — нет в наличии");
-    const ok = await addToCart(p.id, 1, p.sellPrice);
+    const ok = await addToCart(p.id, 1, p.sellPrice, p);
     if (!ok) toast.error("Ошибка");
   };
 
@@ -162,7 +162,7 @@ export default function POS() {
     try {
       const r = await api.get("/barcode/scan/" + code);
       const p = r.data.data;
-      if (p) { await addToCart(p.id, 1, p.sellPrice); toast.success(p.name + " добавлен"); }
+      if (p) { await addToCart(p.id, 1, p.sellPrice, p); toast.success(p.name + " добавлен"); }
     } catch {
       toast.error("Товар не найден: " + code);
     }

@@ -49,26 +49,41 @@ const useCartStore = create((set, get) => ({
     set({ activeId: id, cart: c });
   },
 
-  // Совместимость: одиночная корзина (используется на странице «Корзина»)
-  fetchCart: async () => {
-    try {
-      const r = await api.get("/sales/cart/my");
-      const c = r.data.data;
-      if (c) set((s) => ({ cart: c, activeId: c.id, carts: upsert(s.carts, c) }));
-      else set({ cart: null });
-    } catch {
-      set({ cart: null });
-    }
-  },
+  // product — объект товара (для мгновенной отрисовки в чеке до ответа сервера)
+  addToCart: async (productId, quantity = 1, price, product) => {
+    const saleId = get().activeId || undefined;
+    const unitPrice = price != null ? price : product?.sellPrice;
 
-  addToCart: async (productId, quantity = 1, price) => {
+    // ---- Оптимистичное обновление: товар сразу виден в чеке ----
+    if (product) {
+      set((s) => {
+        let cart = s.cart
+          ? { ...s.cart, items: (s.cart.items || []).slice() }
+          : { id: "tmp-cart-" + Date.now(), status: "PENDING", items: [], totalAmount: 0 };
+        const items = cart.items;
+        const idx = items.findIndex((it) => it.productId === productId);
+        if (idx === -1) {
+          items.push({ id: "tmp-item-" + productId + "-" + Date.now(), productId, quantity, price: unitPrice, product });
+        } else {
+          items[idx] = { ...items[idx], quantity: items[idx].quantity + quantity };
+        }
+        cart.totalAmount = items.reduce((sum, it) => sum + Number(it.price) * it.quantity, 0);
+        return { cart, carts: upsert(s.carts, cart), activeId: cart.id };
+      });
+    }
+
+    // ---- Реальный запрос + сверка с авторитетным ответом сервера ----
     try {
-      const saleId = get().activeId || undefined;
       const r = await api.post("/sales/cart/add", { productId, quantity, price, saleId });
       const c = r.data.data;
-      set((s) => ({ carts: upsert(s.carts, c), activeId: c.id, cart: { ...s.cart, ...c } }));
+      set((s) => {
+        const cleaned = s.carts.filter((x) => !String(x.id).startsWith("tmp-"));
+        return { carts: upsert(cleaned, c), activeId: c.id, cart: { ...s.cart, ...c } };
+      });
       return true;
     } catch {
+      // откат оптимистичного состояния к серверному
+      await get().loadCarts();
       return false;
     }
   },

@@ -148,20 +148,21 @@ export const createCart = async (userId) => {
 };
 
 export const addToCart = async (userId, productId, quantity, price, saleId) => {
-  const product = await prisma.product.findUnique({ where: { id: productId } });
+  // Независимые запросы — параллельно (меньше round-trip к БД)
+  const [product, foundCart] = await Promise.all([
+    prisma.product.findUnique({ where: { id: productId } }),
+    saleId
+      ? prisma.sale.findFirst({ where: { id: saleId, userId, status: "PENDING" } })
+      : prisma.sale.findFirst({ where: { userId, status: "PENDING" } }),
+  ]);
   if (!product) throw { status: 404, message: "Mahsulot topilmadi" };
 
-  let cart;
-  if (saleId) {
-    cart = await prisma.sale.findFirst({ where: { id: saleId, userId, status: "PENDING" } });
-    if (!cart) throw { status: 404, message: "Savat topilmadi" };
-  } else {
-    cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
-    if (!cart) {
-      cart = await prisma.sale.create({
-        data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
-      });
-    }
+  let cart = foundCart;
+  if (saleId && !cart) throw { status: 404, message: "Savat topilmadi" };
+  if (!cart) {
+    cart = await prisma.sale.create({
+      data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
+    });
   }
 
   const existing = await prisma.saleItem.findFirst({ where: { saleId: cart.id, productId } });

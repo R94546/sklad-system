@@ -8,7 +8,6 @@ import Products from './pages/Products';
 import Clients from './pages/Clients';
 import ClientDetail from './pages/ClientDetail';
 import Debts from './pages/Debts';
-import Sales from './pages/Sales';
 import SaleDetail from './pages/SaleDetail';
 import Analytics from './pages/Analytics';
 import Users from './pages/Users';
@@ -16,7 +15,6 @@ import Categories from './pages/Categories';
 import StockIn from './pages/StockIn';
 import Settings from './pages/Settings';
 import AuditLog from './pages/AuditLog';
-import Cart from './pages/Cart';
 import POS from './pages/POS';
 import Kassa from './pages/Kassa';
 import Sessions from './pages/Sessions';
@@ -39,7 +37,6 @@ export default function App() {
         <Route path="/login" element={<Login />} />
         <Route path="/" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
         <Route path="/products" element={<PrivateRoute><Products /></PrivateRoute>} />
-        <Route path="/sales" element={<PrivateRoute><Sales /></PrivateRoute>} />
         <Route path="/sales/:id" element={<PrivateRoute><SaleDetail /></PrivateRoute>} />
         <Route path="/clients" element={<PrivateRoute><Clients /></PrivateRoute>} />
         <Route path="/clients/:id" element={<PrivateRoute><ClientDetail /></PrivateRoute>} />
@@ -52,7 +49,6 @@ export default function App() {
         <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
         <Route path="/sessions" element={<AdminRoute><Sessions /></AdminRoute>} />
         <Route path="/pos" element={<PrivateRoute><POS /></PrivateRoute>} />
-        <Route path="/cart" element={<PrivateRoute><Cart /></PrivateRoute>} />
         <Route path="/kassa" element={<PrivateRoute><Kassa /></PrivateRoute>} />
       </Routes>
     </BrowserRouter>

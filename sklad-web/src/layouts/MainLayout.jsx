@@ -4,8 +4,6 @@ import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import toast from "react-hot-toast";
 import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark, Wallet } from "lucide-react";
-import useCartStore from "../store/cartStore";
-import { useEffect } from "react";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Панель" },
@@ -13,7 +11,6 @@ const navItems = [
   { path: "/stockin", icon: PackagePlus, label: "Приём", adminOnly: true },
   { path: "/kassa", icon: Landmark, label: "Касса", kassirOnly: true },
   { path: "/pos", icon: ShoppingCart, label: "Продажа (POS)" },
-  { path: "/sales", icon: ShoppingCart, label: "Продажи" },
   { path: "/clients", icon: Users, label: "Клиенты" },
   { path: "/debts", icon: CreditCard, label: "Долги" },
   { path: "/sessions", icon: Wallet, label: "Смены", adminOnly: true },
@@ -28,9 +25,6 @@ export default function MainLayout({ children }) {
   const [open, setOpen] = useState(false);
   const { user, logout } = useAuthStore();
   const { dark, toggle } = useThemeStore();
-  const { cart, fetchCart } = useCartStore();
-  const cartCount = cart?.items?.length || 0;
-  useEffect(() => { fetchCart(); }, []);
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -76,10 +70,6 @@ export default function MainLayout({ children }) {
               <p className="text-sm font-medium text-white truncate">{user?.name}</p>
               <p className="text-xs text-slate-400 truncate">{user?.phone}</p>
             </div>
-            <a href="/cart" className="relative p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
-              <ShoppingCart size={16} />
-              {cartCount > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 bg-indigo-500 rounded-full text-white text-[10px] flex items-center justify-center font-bold">{cartCount}</span>}
-            </a>
             <button onClick={toggle} className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition-all">
               {dark ? <Sun size={16} /> : <Moon size={16} />}
             </button>
