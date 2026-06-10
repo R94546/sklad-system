@@ -78,7 +78,7 @@ export default function Debts() {
     setLoading(false);
   };
 
-  // eslint-disable-next-line react-hooks/set-state-in-effect, react-hooks/exhaustive-deps
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
   const openPay = (d) => { setSelected(d); setAmount(""); setDetailModal(null); setPayModal(true); };

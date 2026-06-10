@@ -15,12 +15,12 @@ export const exportToExcel = (data, columns, filename = 'export') => {
   XLSX.writeFile(wb, filename + '.xlsx');
 };
 
-export const exportToPDF = (data, columns, title = 'Hisobot', filename = 'export') => {
+export const exportToPDF = (data, columns, title = 'Отчёт', filename = 'export') => {
   const doc = new jsPDF();
   doc.setFontSize(16);
   doc.text(title, 14, 15);
   doc.setFontSize(10);
-  doc.text(new Date().toLocaleDateString(), 14, 22);
+  doc.text(new Date().toLocaleDateString('ru-RU'), 14, 22);
 
   autoTable(doc, {
     startY: 28,

@@ -62,7 +62,7 @@ export default function Dashboard() {
     if (isAdmin) {
       api.get("/analytics/low-stock").then(r => setLowStock(r.data.data || [])).catch(() => {});
     }
-  }, [authUser]);
+  }, [authUser, isAdmin]);
 
   const openModal = async (type) => {
     setModal(type);

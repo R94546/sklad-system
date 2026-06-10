@@ -8,28 +8,29 @@ export default function BarcodeScanner({ onScan, onClose }) {
   const [error, setError] = useState(null);
   const [scanning, setScanning] = useState(false);
 
+  const stopScanner = () => {
+    try { BrowserMultiFormatReader.releaseAllStreams(); } catch { /* потоки уже освобождены */ }
+    setScanning(false);
+  };
+
   useEffect(() => {
     const reader = new BrowserMultiFormatReader();
     readerRef.current = reader;
 
-    reader.decodeFromVideoDevice(undefined, videoRef.current, (result, err) => {
+    reader.decodeFromVideoDevice(undefined, videoRef.current, (result) => {
       if (result) {
         onScan(result.getText());
         stopScanner();
       }
     }).then(() => {
       setScanning(true);
-    }).catch((err) => {
-      setError("Kamera ochilmadi. Ruxsat bering.");
+    }).catch(() => {
+      setError("Камера не открылась. Дайте разрешение.");
     });
 
     return () => stopScanner();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
-
-  const stopScanner = () => {
-    try { BrowserMultiFormatReader.releaseAllStreams(); } catch {}
-    setScanning(false);
-  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -38,7 +39,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-slate-700">
           <div className="flex items-center gap-2">
             <Camera size={18} className="text-indigo-500" />
-            <span className="font-semibold text-slate-800 dark:text-white">Barcode Skaner</span>
+            <span className="font-semibold text-slate-800 dark:text-white">Сканер штрихкода</span>
           </div>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
             <X size={20} />
@@ -64,7 +65,7 @@ export default function BarcodeScanner({ onScan, onClose }) {
               </div>
               {scanning && (
                 <div className="absolute bottom-2 left-0 right-0 flex justify-center">
-                  <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full">Barcodni kameraga tuting...</span>
+                  <span className="bg-black/60 text-white text-xs px-3 py-1 rounded-full">Наведите штрихкод на камеру...</span>
                 </div>
               )}
             </div>

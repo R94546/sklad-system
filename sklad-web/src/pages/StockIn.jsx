@@ -28,7 +28,6 @@ export default function StockIn() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     api.get('/products?limit=1000').then(r => setProducts(r.data.data.data));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleScan = async (barcode) => {

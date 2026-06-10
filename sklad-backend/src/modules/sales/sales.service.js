@@ -130,18 +130,40 @@ export const getCart = async (userId) => {
   });
 };
 
-export const addToCart = async (userId, productId, quantity, price) => {
+// Все открытые чеки (параллельные корзины) продавца
+export const getCarts = async (userId) => {
+  return prisma.sale.findMany({
+    where: { userId, status: "PENDING" },
+    include: { client: true, user: true, items: { include: { product: true } } },
+    orderBy: { number: "asc" },
+  });
+};
+
+// Создать новый пустой чек (параллельная корзина)
+export const createCart = async (userId) => {
+  return prisma.sale.create({
+    data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" },
+    include: { client: true, user: true, items: { include: { product: true } } },
+  });
+};
+
+export const addToCart = async (userId, productId, quantity, price, saleId) => {
   const product = await prisma.product.findUnique({ where: { id: productId } });
   if (!product) throw { status: 404, message: "Mahsulot topilmadi" };
-  
-  let cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
-  
-  if (!cart) {
-    cart = await prisma.sale.create({
-      data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
-    });
+
+  let cart;
+  if (saleId) {
+    cart = await prisma.sale.findFirst({ where: { id: saleId, userId, status: "PENDING" } });
+    if (!cart) throw { status: 404, message: "Savat topilmadi" };
+  } else {
+    cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+    if (!cart) {
+      cart = await prisma.sale.create({
+        data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" }
+      });
+    }
   }
-  
+
   const existing = await prisma.saleItem.findFirst({ where: { saleId: cart.id, productId } });
   
   if (existing) {
@@ -161,7 +183,9 @@ export const addToCart = async (userId, productId, quantity, price) => {
 };
 
 export const removeFromCart = async (userId, itemId) => {
-  const cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+  const item = await prisma.saleItem.findUnique({ where: { id: itemId } });
+  if (!item) throw { status: 404, message: "Pozitsiya topilmadi" };
+  const cart = await prisma.sale.findFirst({ where: { id: item.saleId, userId, status: "PENDING" } });
   if (!cart) throw { status: 404, message: "Savat topilmadi" };
   await prisma.saleItem.delete({ where: { id: itemId } });
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
@@ -184,7 +208,7 @@ export const confirmCart = async (cartId, data) => {
   const finalTotal = total - discountAmount;
   const updated = await prisma.sale.update({
     where: { id: cartId },
-    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: discountAmount, discountType: discountType, totalAmount: finalTotal, sessionId: session?.id || null },
+    data: { status: "COMPLETED", paymentType: data.paymentType || "CASH", clientId: data.clientId || null, discount: discountAmount, discountType: discountType, totalAmount: finalTotal, sessionId: session?.id || null, note: data.note || null },
     include: { client: true, user: true, items: { include: { product: true } } }
   });
   if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
@@ -251,7 +275,9 @@ export const kassaReturn = async (saleId, reason) => {
 };
 
 export const updateCartItem = async (userId, itemId, quantity, price) => {
-  const cart = await prisma.sale.findFirst({ where: { userId, status: "PENDING" } });
+  const item = await prisma.saleItem.findUnique({ where: { id: itemId } });
+  if (!item) throw { status: 404, message: "Pozitsiya topilmadi" };
+  const cart = await prisma.sale.findFirst({ where: { id: item.saleId, userId, status: "PENDING" } });
   if (!cart) throw { status: 404, message: "Savat topilmadi" };
   if (quantity !== undefined) {
     const qty = parseInt(quantity);

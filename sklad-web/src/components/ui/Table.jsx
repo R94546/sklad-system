@@ -1,8 +1,8 @@
-﻿export default function Table({ columns, data, loading, emptyText = "Malumot topilmadi" }) {
+﻿export default function Table({ columns, data, loading, emptyText = "Данные не найдены" }) {
   if (loading) return (
     <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-8 text-center">
       <div className="animate-spin h-8 w-8 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto mb-3" />
-      <p className="text-slate-400 text-sm">Yuklanmoqda...</p>
+      <p className="text-slate-400 text-sm">Загрузка...</p>
     </div>
   );
 

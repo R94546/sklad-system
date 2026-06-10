@@ -32,7 +32,7 @@ export default function POS() {
   const navigate = useNavigate();
   const { user } = useAuthStore();
   const { dark, toggle } = useThemeStore();
-  const { cart, fetchCart, addToCart, removeItem, patchItem, confirmCart } = useCartStore();
+  const { cart, carts, activeId, loadCarts, newCart, switchCart, addToCart, removeItem, patchItem, confirmCart } = useCartStore();
 
   const [view, setView] = useState("register"); // register | payment
   const [products, setProducts] = useState([]);
@@ -101,7 +101,7 @@ export default function POS() {
       }
       setSessionLoaded(true);
       setLoading(false);
-      fetchCart();
+      loadCarts();
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -236,7 +236,7 @@ export default function POS() {
       setProducts(p.data.data.data || []);
       setCategories(c.data.data.data || c.data.data || []);
       setClients(cl.data.data.data || []);
-      fetchCart();
+      loadCarts();
       toast.success("Данные обновлены");
     } catch { toast.error("Ошибка"); }
   };
@@ -316,12 +316,14 @@ export default function POS() {
     const snapshot = {
       items: items.map((i) => ({ name: i.product?.name || "Товар", qty: i.quantity, price: Number(i.price) })),
       total, change, paymentType,
+      number: cart?.number || null,
       client: selectedClient || null,
       seller: user?.name || "",
+      note,
       date: new Date().toLocaleString("ru-RU"),
     };
     setSaving(true);
-    const ok = await confirmCart({ paymentType, clientId: selectedClient?.id || "", dueDate, debtAmount });
+    const ok = await confirmCart({ paymentType, clientId: selectedClient?.id || "", dueDate, debtAmount, note });
     setSaving(false);
     if (ok) {
       setLastSale(snapshot);
@@ -342,9 +344,10 @@ export default function POS() {
     ).join("");
     const html = `<div style="font-family:monospace;width:280px;color:#000">
       <h3 style="text-align:center;margin:4px 0">Sklad</h3>
-      <div style="font-size:12px">Чек #1001 · ${s.date}</div>
+      <div style="font-size:12px">Чек #${s.number || "—"} · ${s.date}</div>
       <div style="font-size:12px">Продавец: ${s.seller}</div>
       ${s.client ? `<div style="font-size:12px">Клиент: ${s.client.name}</div>` : ""}
+      ${s.note ? `<div style="font-size:12px">Заметка: ${s.note}</div>` : ""}
       <hr/>
       <table style="width:100%;font-size:12px;border-collapse:collapse">${rows}</table>
       <hr/>
@@ -366,7 +369,7 @@ export default function POS() {
     setSelectedClient(null);
     setNote("");
     setDueDate("");
-    fetchCart();
+    loadCarts();
   };
 
   const sellerInitial = (user?.name || "P")[0].toUpperCase();
@@ -385,10 +388,23 @@ export default function POS() {
             Заказы
           </button>
           <div className="w-px h-6 bg-white/10 mx-1" />
-          <button onClick={() => toast("Параллельные чеки — скоро", { icon: "🧾" })} className="w-9 h-9 flex items-center justify-center rounded-md text-slate-300 bg-[#2b3545] hover:text-white transition">
+          <button onClick={async () => { await newCart(); setSelectedItemId(null); }} title="Новый чек" className="w-9 h-9 flex items-center justify-center rounded-md text-slate-300 bg-[#2b3545] hover:text-white transition">
             <Plus size={18} />
           </button>
-          <button className="px-4 py-1.5 rounded-md text-sm font-semibold text-white bg-[#2b3545] ring-2 ring-teal-500/80">1001</button>
+          <div className="flex items-center gap-1 overflow-x-auto max-w-[34vw]">
+            {carts.length === 0 ? (
+              <span className="px-4 py-1.5 rounded-md text-sm font-semibold text-slate-400 bg-[#2b3545]">—</span>
+            ) : carts.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { switchCart(c.id); setSelectedItemId(null); }}
+                title={(c.items?.length || 0) + " тов."}
+                className={"px-4 py-1.5 rounded-md text-sm font-semibold whitespace-nowrap shrink-0 transition bg-[#2b3545] " + (c.id === activeId ? "text-white ring-2 ring-teal-500/80" : "text-slate-300 hover:text-white")}
+              >
+                {c.number}
+              </button>
+            ))}
+          </div>
         </div>
 
         <div className="flex items-center gap-2 ml-auto">
@@ -499,7 +515,7 @@ export default function POS() {
               <button onClick={() => setShowNote(true)} className="flex items-center justify-center gap-1.5 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-sm font-medium text-slate-600 dark:text-slate-300 transition">
                 <FileText size={16} className={note ? "text-teal-500" : "text-slate-500"} /> Заметка
               </button>
-              <button onClick={() => toast("Отложенные чеки — скоро", { icon: "⏳" })} className="flex items-center justify-center py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 transition">
+              <button onClick={async () => { await newCart(); setSelectedItemId(null); }} title="Отложить (новый чек)" className="flex items-center justify-center py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 transition">
                 <Upload size={16} />
               </button>
               <button onClick={() => (items.length ? clearCart() : null)} title="Очистить чек" className="flex items-center justify-center py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-500 transition">
@@ -689,7 +705,7 @@ export default function POS() {
           )}
           <div className="flex flex-wrap justify-center gap-3 mt-12">
             <button onClick={printReceipt} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#2b3545] hover:bg-[#36425a] text-white font-semibold transition"><Printer size={18} /> Печать</button>
-            <button onClick={sendReceipt} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#2b3545] hover:bg-[#36425a] text-white font-semibold transition"><Send size={18} /> Send Receipt</button>
+            <button onClick={sendReceipt} className="flex items-center gap-2 px-6 py-3.5 rounded-xl bg-[#2b3545] hover:bg-[#36425a] text-white font-semibold transition"><Send size={18} /> Отправить чек</button>
             <button onClick={continueSale} className="flex items-center gap-2 px-8 py-3.5 rounded-xl bg-[#714B67] hover:bg-[#5d3d54] text-white font-bold transition"><Plus size={18} /> Продолжить</button>
           </div>
         </div>

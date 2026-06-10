@@ -126,7 +126,7 @@ export default function OrdersView({ user }) {
                   <p className="text-xs text-slate-400">{time}</p>
                 </div>
                 <div className="w-24 shrink-0">
-                  <p className="font-bold text-white tabular-nums">#{o.id.slice(-6).toUpperCase()}</p>
+                  <p className="font-bold text-white tabular-nums">#{o.number || o.id.slice(-6).toUpperCase()}</p>
                   <p className="text-xs text-slate-500">{o.items?.length || 0} тов.</p>
                 </div>
                 <div className="flex-1 min-w-0">
@@ -171,7 +171,7 @@ function OrderDetailModal({ id, onClose }) {
       <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] flex flex-col overflow-hidden">
         <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
           <h2 className="font-bold text-slate-800 dark:text-white">
-            Заказ {order ? "#" + order.id.slice(-6).toUpperCase() : ""}
+            Заказ {order ? "#" + (order.number || order.id.slice(-6).toUpperCase()) : ""}
           </h2>
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
@@ -190,6 +190,12 @@ function OrderDetailModal({ id, onClose }) {
               <span className="text-xs text-slate-500 dark:text-slate-400 uppercase">Статус:</span>
               <span className={"text-xs px-2.5 py-1 rounded-full font-medium " + st.cls}>{st.label}</span>
             </div>
+            {order.note && (
+              <div className="text-sm bg-slate-50 dark:bg-slate-700/50 rounded-lg px-3 py-2">
+                <span className="text-xs text-slate-500 dark:text-slate-400 uppercase">Заметка: </span>
+                <span className="text-slate-700 dark:text-slate-200">{order.note}</span>
+              </div>
+            )}
 
             <div className="border border-slate-100 dark:border-slate-700 rounded-xl overflow-hidden">
               {(order.items || []).map((it) => (

@@ -20,7 +20,6 @@ export default function SaleDetail() {
       api.get('/sales/' + id).then(r => setSale(r.data.data)),
       api.get('/settings').then(r => setSettings(r.data.data)),
     ]).finally(() => setLoading(false));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   const handlePrint = () => {

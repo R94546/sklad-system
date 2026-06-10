@@ -84,6 +84,8 @@ model Client {
 
 model Sale {
   id          String      @id @default(uuid())
+  number      Int         @default(autoincrement())
+  note        String?
   userId      String
   user        User        @relation(fields: [userId], references: [id])
   clientId    String?
