@@ -91,6 +91,7 @@ export default function Products() {
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [search, setSearch] = useState("");
+  const [categoryId, setCategoryId] = useState("");
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -107,18 +108,23 @@ export default function Products() {
 
   const load = async () => {
     setLoading(true);
-    try { const res = await api.get("/products?search=" + search); setProducts(res.data.data.data); }
-    catch { toast.error("Ошибка"); }
+    try {
+      const params = new URLSearchParams();
+      if (search) params.set("search", search);
+      if (categoryId) params.set("categoryId", categoryId);
+      const res = await api.get("/products?" + params.toString());
+      setProducts(res.data.data.data);
+    } catch { toast.error("Ошибка"); }
     setLoading(false);
   };
 
   useEffect(() => { api.get("/categories").then(r => setCategories(r.data.data)); }, []);
-  // Debounce: запрос только через 350мс после последнего ввода
+  // Debounce: запрос только через 350мс после последнего ввода / смены категории
   useEffect(() => {
     const t = setTimeout(load, 350);
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search]);
+  }, [search, categoryId]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -198,51 +204,62 @@ export default function Products() {
       </div>
 
       <div className="flex gap-2">
-        <Input placeholder="Поиск..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
+        <Input placeholder="Поиск товаров..." value={search} onChange={e => setSearch(e.target.value)} className="flex-1" />
         <Button variant="outline" onClick={() => { setScannerTarget("search"); setShowScanner(true); }}>
           <Scan size={16} /> Сканер
         </Button>
       </div>
 
-      <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
-              <tr>
-                {["Название", "Цена", "Остаток", ""].map((h, i) => (
-                  <th key={i} className={"px-4 py-3 text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider " + (i >= 1 ? "text-right" : "text-left")}>{h}</th>
-                ))}
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
-              {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center"><div className="animate-spin h-6 w-6 border-4 border-indigo-500 border-t-transparent rounded-full mx-auto" /></td></tr>
-              ) : products.length === 0 ? (
-                <tr><td colSpan={99} className="py-2"><EmptyState type="products" title="Товары не найдены" desc="Нажмите + чтобы добавить товар" /></td></tr>
-              ) : products.map(p => (
-                <tr key={p.id} onClick={() => setSelected(p)} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
-                  <td className="px-4 py-3">
-                    <div className="flex items-center gap-3">
-                      {p.imageUrl ? <img src={p.imageUrl} alt={p.name} className="w-10 h-10 rounded-lg object-cover" /> : <div className="w-10 h-10 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center"><Package size={18} className="text-slate-400" /></div>}
-                      <div>
-                        <span className="font-medium text-slate-800 dark:text-slate-200 block max-w-[120px] truncate">{p.name}</span>
-                        {p.barcode && <span className="text-xs font-mono text-slate-400">{p.barcode}</span>}
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-4 py-3 text-right font-medium text-slate-800 dark:text-white">{Number(p.sellPrice).toLocaleString("ru-RU")} сом</td>
-                  <td className="px-4 py-3 text-right"><Badge variant={p.quantity <= p.minStock ? "red" : "green"}>{p.quantity} {UNITS[p.unit]}</Badge></td>
-                  <td className="px-4 py-3 text-right" onClick={e => e.stopPropagation()}>
-                    <button onClick={() => setCartProduct(p)} className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg">
-                      <ShoppingCart size={15} />
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Фильтр-чипы категорий (стиль Odoo) */}
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        <button onClick={() => setCategoryId("")}
+          className={"px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors " + (categoryId === "" ? "bg-indigo-500 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700")}>
+          Все
+        </button>
+        {categories.map(c => (
+          <button key={c.id} onClick={() => setCategoryId(c.id)}
+            className={"px-3 py-1.5 rounded-lg text-sm font-medium whitespace-nowrap transition-colors " + (categoryId === c.id ? "bg-indigo-500 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700")}>
+            {c.name}
+          </button>
+        ))}
       </div>
+
+      {/* Kanban-карточки товаров (стиль Odoo) */}
+      {loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 animate-pulse" />)}
+        </div>
+      ) : products.length === 0 ? (
+        <EmptyState type="products" title="Товары не найдены" desc="Нажмите «Добавить» чтобы создать товар" />
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {products.map(p => {
+            const low = p.quantity <= p.minStock;
+            return (
+              <div key={p.id} onClick={() => setSelected(p)}
+                className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex gap-3 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all">
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-slate-800 dark:text-white text-sm leading-tight line-clamp-2">{p.name}</p>
+                  {p.barcode && <p className="text-[11px] font-mono text-slate-400 mt-0.5 truncate">[{p.barcode}]</p>}
+                  <p className="text-sm font-bold text-indigo-600 dark:text-indigo-400 mt-2">{Number(p.sellPrice).toLocaleString("ru-RU")} сом</p>
+                  <p className={"text-[11px] mt-1 font-medium " + (low ? "text-red-500" : "text-slate-400")}>
+                    В наличии: {p.quantity} {UNITS[p.unit]}
+                  </p>
+                </div>
+                <div className="flex flex-col items-end justify-between flex-shrink-0">
+                  {p.imageUrl
+                    ? <img src={p.imageUrl} alt={p.name} className="w-16 h-16 rounded-lg object-cover" />
+                    : <div className="w-16 h-16 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center"><Package size={24} className="text-slate-400" /></div>}
+                  <button onClick={(e) => { e.stopPropagation(); setCartProduct(p); }}
+                    className="mt-2 p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="В чек">
+                    <ShoppingCart size={16} />
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      )}
 
       {showScanner && (
         <BarcodeScanner

@@ -3,7 +3,7 @@ import { useState } from "react";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import toast from "react-hot-toast";
-import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark, Wallet } from "lucide-react";
+import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark, Wallet, ArrowLeft } from "lucide-react";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Панель" },
@@ -85,9 +85,15 @@ export default function MainLayout({ children }) {
 
       <div className="flex-1 flex flex-col overflow-hidden">
         <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-3 flex items-center gap-3">
-          <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+          <button onClick={() => setOpen(!open)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800" title="Меню">
             {open ? <X size={20} /> : <Menu size={20} />}
           </button>
+          {location.pathname !== "/" && (
+            <button onClick={() => navigate(-1)} className="p-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-1 text-slate-600 dark:text-slate-300" title="Назад">
+              <ArrowLeft size={20} />
+              <span className="text-sm font-medium hidden sm:inline">Назад</span>
+            </button>
+          )}
           <h1 className="text-lg font-bold text-slate-900 dark:text-white">Sklad</h1>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-8 bg-slate-50 dark:bg-slate-900">
