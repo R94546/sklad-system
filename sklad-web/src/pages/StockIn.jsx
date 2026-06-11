@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Scan } from 'lucide-react';
+import { Plus, Scan, Pencil, Trash2 } from 'lucide-react';
 import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Button, Input, Select, Modal, Table } from '../components/ui';
@@ -12,6 +12,8 @@ export default function StockIn() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [modal, setModal] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [form, setForm] = useState({ productId: '', quantity: '', price: '', note: '' });
@@ -55,9 +57,15 @@ export default function StockIn() {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/stockin', form);
-      toast.success('Приход оформлен');
+      if (editing) {
+        await api.put('/stockin/' + editing.id, { quantity: form.quantity, price: form.price, note: form.note });
+        toast.success('Приход обновлён');
+      } else {
+        await api.post('/stockin', form);
+        toast.success('Приход оформлен');
+      }
       setModal(false);
+      setEditing(null);
       setForm({ productId: '', quantity: '', price: '', note: '' });
       setSelectedProduct(null);
       load();
@@ -65,10 +73,25 @@ export default function StockIn() {
     setSaving(false);
   };
 
-  const openModal = () => {
+  const openCreate = () => {
+    setEditing(null);
     setForm({ productId: '', quantity: '', price: '', note: '' });
     setSelectedProduct(null);
     setModal(true);
+  };
+
+  const openEdit = (row) => {
+    setEditing(row);
+    setForm({ productId: row.productId, quantity: String(row.quantity), price: String(row.price), note: row.note || '' });
+    setSelectedProduct(row.product || null);
+    setModal(true);
+  };
+
+  const doDelete = async () => {
+    const id = confirmDel.id;
+    setConfirmDel(null);
+    try { await api.delete('/stockin/' + id); toast.success('Приход удалён'); load(); }
+    catch (err) { toast.error(err.response?.data?.message || 'Ошибка'); }
   };
 
   const productOptions = products.map(p => ({ value: p.id, label: p.name + ' (остаток: ' + p.quantity + ')' }));
@@ -81,36 +104,50 @@ export default function StockIn() {
     { title: 'Итого', key: 'price', align: 'right', render: (v, row) => <span className="font-bold">{(Number(v) * row.quantity).toLocaleString('ru-RU')} сом</span> },
     { title: 'Кто', key: 'user', render: (v) => <span className="text-slate-500 dark:text-slate-400">{v?.name}</span> },
     { title: 'Заметка', key: 'note', render: (v) => <span className="text-gray-400 text-xs">{v || '-'}</span> },
+    { title: '', key: 'id', align: 'right', render: (_, row) => (
+      <div className="flex items-center justify-end gap-1">
+        <button onClick={() => openEdit(row)} className="p-1.5 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="Изменить"><Pencil size={15} /></button>
+        <button onClick={() => setConfirmDel(row)} className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg" title="Удалить"><Trash2 size={15} /></button>
+      </div>
+    ) },
   ];
 
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Приход товара</h1>
-        <Button onClick={openModal}><Plus size={16} /> Оформить приход</Button>
+        <Button onClick={openCreate}><Plus size={16} /> Оформить приход</Button>
       </div>
 
       <Table columns={columns} data={stockins} loading={loading} emptyText="Приходов нет" />
 
       {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 
-      <Modal open={modal} onClose={() => setModal(false)} title="Новый приход">
+      <Modal open={modal} onClose={() => { setModal(false); setEditing(null); }} title={editing ? 'Изменить приход' : 'Новый приход'}>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Товар</label>
-            <div className="flex gap-2">
-              <div className="flex-1">
-                <Select value={form.productId} onChange={handleProductChange} options={productOptions} placeholder="Выберите товар" required />
+            {editing ? (
+              <div className="bg-slate-50 dark:bg-slate-700 rounded-lg px-3 py-2 text-sm font-medium text-slate-700 dark:text-slate-200">
+                {selectedProduct?.name || '—'}
               </div>
-              <Button type="button" variant="outline" onClick={() => setShowScanner(true)} title="Сканер штрихкода">
-                <Scan size={16} />
-              </Button>
-            </div>
-            {selectedProduct && (
-              <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg px-3 py-2 flex items-center justify-between">
-                <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{selectedProduct.name}</span>
-                <span className="text-xs text-indigo-500">Остаток: {selectedProduct.quantity}</span>
-              </div>
+            ) : (
+              <>
+                <div className="flex gap-2">
+                  <div className="flex-1">
+                    <Select value={form.productId} onChange={handleProductChange} options={productOptions} placeholder="Выберите товар" required />
+                  </div>
+                  <Button type="button" variant="outline" onClick={() => setShowScanner(true)} title="Сканер штрихкода">
+                    <Scan size={16} />
+                  </Button>
+                </div>
+                {selectedProduct && (
+                  <div className="bg-indigo-50 dark:bg-indigo-500/10 rounded-lg px-3 py-2 flex items-center justify-between">
+                    <span className="text-sm font-medium text-indigo-700 dark:text-indigo-300">{selectedProduct.name}</span>
+                    <span className="text-xs text-indigo-500">Остаток: {selectedProduct.quantity}</span>
+                  </div>
+                )}
+              </>
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
@@ -119,10 +156,20 @@ export default function StockIn() {
           </div>
           <Input label="Заметка" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />
           <div className="flex gap-3 pt-2">
-            <Button type="button" variant="outline" className="flex-1" onClick={() => setModal(false)}>Отмена</Button>
+            <Button type="button" variant="outline" className="flex-1" onClick={() => { setModal(false); setEditing(null); }}>Отмена</Button>
             <Button type="submit" className="flex-1" loading={saving}>Сохранить</Button>
           </div>
         </form>
+      </Modal>
+
+      <Modal open={!!confirmDel} onClose={() => setConfirmDel(null)} title="Удалить приход?" size="sm">
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Остаток товара уменьшится на {confirmDel?.quantity} {UNITS[confirmDel?.product?.unit] || confirmDel?.product?.unit}. Если товар уже продан — удаление будет отклонено.
+        </p>
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmDel(null)}>Отмена</Button>
+          <Button type="button" variant="danger" className="flex-1" onClick={doDelete}>Удалить</Button>
+        </div>
       </Modal>
     </div>
   );
