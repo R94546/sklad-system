@@ -2,6 +2,7 @@
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
 import { errorMiddleware } from './middleware/error.middleware.js';
 import authRoutes from './modules/auth/auth.routes.js';
 import usersRoutes from './modules/users/users.routes.js';
@@ -20,11 +21,16 @@ import sessionsRoutes from './modules/sessions/sessions.routes.js';
 
 const app = express();
 
-app.use(helmet());
+// crossOriginResourcePolicy: cross-origin — чтобы фронт (5173) мог грузить
+// картинки из /uploads с бэкенда (5000)
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 app.use(cors());
 app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+
+// Локальное хранилище изображений (фолбэк, если Firebase не настроен)
+app.use('/uploads', express.static(path.resolve('uploads')));
 
 app.get('/health', (req, res) => {
   res.json({ status: 'OK', message: 'Sklad API ishlayapti' });

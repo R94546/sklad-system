@@ -13,9 +13,10 @@ router.use(roleMiddleware('ADMIN'));
 
 router.post('/', upload.single('image'), async (req, res, next) => {
   try {
-    if (!req.file) return error(res, 'Fayl yuklanmadi', 400);
-    const url = await uploadImage(req.file, 'products');
-    return success(res, { url }, 'Rasm yuklandi');
+    if (!req.file) return error(res, 'Файл не загружен', 400);
+    const baseUrl = req.protocol + '://' + req.get('host');
+    const url = await uploadImage(req.file, 'products', baseUrl);
+    return success(res, { url }, 'Изображение загружено');
   } catch (err) { next(err); }
 });
 
