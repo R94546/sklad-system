@@ -1,5 +1,5 @@
-import { useEffect, useState, useMemo } from "react";
-import { Search, ChevronLeft, ChevronRight, Info, X, Package, ShoppingCart, ChevronDown } from "lucide-react";
+import { useEffect, useState, useMemo, useCallback } from "react";
+import { Search, ChevronLeft, ChevronRight, Info, X, Package, ShoppingCart, ChevronDown, Trash2 } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
@@ -31,22 +31,35 @@ export default function OrdersView({ user }) {
   const [page, setPage] = useState(1);
   const [filterOpen, setFilterOpen] = useState(false);
   const [detailId, setDetailId] = useState(null);
+  const [confirmDel, setConfirmDel] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isAdmin = user?.role === "ADMIN";
 
-  useEffect(() => {
-    (async () => {
-      setLoading(true);
-      try {
-        const r = await api.get("/sales?limit=200");
-        let list = r.data.data.data || [];
-        if (!isAdmin) list = list.filter((s) => s.user?.name === user?.name);
-        setOrders(list);
-      } catch { toast.error("Ошибка загрузки заказов"); }
-      setLoading(false);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const r = await api.get("/sales?limit=200");
+      let list = r.data.data.data || [];
+      if (!isAdmin) list = list.filter((s) => s.user?.name === user?.name);
+      setOrders(list);
+    } catch { toast.error("Ошибка загрузки заказов"); }
+    setLoading(false);
+  }, [isAdmin, user?.name]);
+
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { load(); }, [load]);
+
+  const doDelete = async () => {
+    setDeleting(true);
+    try {
+      await api.delete("/sales/" + confirmDel.id);
+      toast.success("Заказ удалён");
+      setConfirmDel(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || "Ошибка"); }
+    setDeleting(false);
+  };
 
   const filtered = useMemo(() => {
     let list = orders;
@@ -136,6 +149,9 @@ export default function OrdersView({ user }) {
                 <p className="font-bold text-white whitespace-nowrap tabular-nums">{fmt(o.totalAmount)} сом</p>
                 <span className={"text-xs px-2.5 py-1 rounded-full font-medium whitespace-nowrap " + st.cls}>{st.label}</span>
                 <button onClick={(e) => { e.stopPropagation(); setDetailId(o.id); }} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-white/10 hover:text-white transition shrink-0"><Info size={18} /></button>
+                {isAdmin && (
+                  <button onClick={(e) => { e.stopPropagation(); setConfirmDel(o); }} className="w-8 h-8 flex items-center justify-center rounded-full text-slate-400 hover:bg-rose-500/15 hover:text-rose-400 transition shrink-0" title="Удалить заказ"><Trash2 size={16} /></button>
+                )}
               </div>
             );
           })
@@ -143,6 +159,22 @@ export default function OrdersView({ user }) {
       </div>
 
       {detailId && <OrderDetailModal id={detailId} onClose={() => setDetailId(null)} />}
+
+      {confirmDel && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setConfirmDel(null)} />
+          <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-sm p-5">
+            <h2 className="font-bold text-slate-800 dark:text-white mb-1">Удалить заказ?</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400">
+              Заказ #{confirmDel.number || confirmDel.id.slice(-6).toUpperCase()} ({STATUS[confirmDel.status]?.label || confirmDel.status}). Если он был оформлен — остаток товара вернётся на склад.
+            </p>
+            <div className="flex gap-3 pt-4">
+              <button onClick={() => setConfirmDel(null)} className="flex-1 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 text-sm font-medium hover:bg-slate-50 dark:hover:bg-slate-700">Отмена</button>
+              <button onClick={doDelete} disabled={deleting} className="flex-1 py-2 rounded-lg bg-rose-600 text-white text-sm font-medium hover:bg-rose-700 disabled:opacity-50">{deleting ? "Удаление…" : "Удалить"}</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

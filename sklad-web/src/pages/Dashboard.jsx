@@ -70,7 +70,7 @@ export default function Dashboard() {
     const endpoint = isAdmin ? "/analytics/dashboard" : "/analytics/seller-dashboard";
     api.get(endpoint).then(r => setData(r.data.data)).catch(() => setData({ today: { amount: 0 }, month: { amount: 0 }, totalDebt: 0, lowStockCount: 0, totalClients: 0 }));
     api.get("/analytics/sales-chart?period=week").then(r => setChart(r.data.data)).catch(() => {});
-    api.get("/sales?limit=5").then(r => setRecentSales(r.data.data.data)).catch(() => {});
+    api.get("/sales?limit=5&status=COMPLETED").then(r => setRecentSales(r.data.data.data)).catch(() => {});
     if (isAdmin) {
       api.get("/analytics/low-stock").then(r => setLowStock(r.data.data || [])).catch(() => {});
     }
@@ -81,11 +81,11 @@ export default function Dashboard() {
     setModalLoading(true);
     setModalData([]);
     try {
-      if (type === "today") { const r = await api.get("/sales?limit=50"); setModalData(r.data.data.data.filter(s => new Date(s.createdAt).toDateString() === new Date().toDateString())); }
-      if (type === "month") { const r = await api.get("/sales?limit=200"); const now = new Date(); setModalData(r.data.data.data.filter(s => { const d = new Date(s.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); })); }
+      if (type === "today") { const r = await api.get("/sales?limit=50&status=COMPLETED"); setModalData(r.data.data.data.filter(s => new Date(s.createdAt).toDateString() === new Date().toDateString())); }
+      if (type === "month") { const r = await api.get("/sales?limit=200&status=COMPLETED"); const now = new Date(); setModalData(r.data.data.data.filter(s => { const d = new Date(s.createdAt); return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear(); })); }
       if (type === "debts") { const r = await api.get("/debts"); setModalData(r.data.data.data); }
       if (type === "clients") { const r = await api.get("/clients"); setModalData(r.data.data.data); }
-      if (type === "recent") { const r = await api.get("/sales?limit=20"); setModalData(r.data.data.data); }
+      if (type === "recent") { const r = await api.get("/sales?limit=20&status=COMPLETED"); setModalData(r.data.data.data); }
     } catch { toast.error("Ошибка"); }
     setModalLoading(false);
   };

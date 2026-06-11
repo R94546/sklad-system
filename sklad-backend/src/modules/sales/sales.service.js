@@ -1,8 +1,8 @@
 ﻿import prisma from '../../config/db.js';
 
 export const getAll = async (query) => {
-  const { page = 1, limit = 20, userId } = query;
-  const where = { ...(userId && { userId }) };
+  const { page = 1, limit = 20, userId, status } = query;
+  const where = { ...(userId && { userId }), ...(status && { status }) };
   const [data, total] = await Promise.all([
     prisma.sale.findMany({
       where,
@@ -143,8 +143,14 @@ export const getCarts = async (userId) => {
   });
 };
 
-// Создать новый пустой чек (параллельная корзина)
+// Создать новый пустой чек (параллельная корзина).
+// Переиспользуем уже существующий пустой чек, чтобы не плодить фантомные корзины.
 export const createCart = async (userId) => {
+  const empty = await prisma.sale.findFirst({
+    where: { userId, status: "PENDING", items: { none: {} } },
+    include: { client: true, user: true, items: { include: { product: true } } },
+  });
+  if (empty) return empty;
   return prisma.sale.create({
     data: { userId, status: "PENDING", totalAmount: 0, paymentType: "CASH" },
     include: { client: true, user: true, items: { include: { product: true } } },
