@@ -27,12 +27,17 @@ export const getByBarcode = async (barcode) => {
 const has = (v) => v !== undefined && v !== null && v !== "";
 
 export const create = async (data, file) => {
+  const name = data.name?.trim();
+  if (!name) throw { status: 400, message: "Введите название товара" };
+  // Защита от дублей вроде «Qoy»/«qoy» (без учёта регистра)
+  const dup = await prisma.product.findFirst({ where: { isActive: true, name: { equals: name, mode: "insensitive" } } });
+  if (dup) throw { status: 400, message: "Товар с таким названием уже существует" };
   let imageUrl = null;
   if (file) imageUrl = await uploadImage(file, "products");
   const barcode = data.barcode || await generateBarcode();
   return prisma.product.create({
     data: {
-      name: data.name,
+      name,
       categoryId: data.categoryId,
       unit: data.unit || "PIECE",
       barcode,

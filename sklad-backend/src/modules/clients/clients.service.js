@@ -48,11 +48,20 @@ export const getById = async (id) => {
   });
 };
 
+const normalizePhone = (p) => (p || '').replace(/[\s\-()]/g, '');
+const validatePhone = (p) => {
+  if (!/^\+998\d{9}$/.test(p)) throw { status: 400, message: 'Телефон в формате +998XXXXXXXXX' };
+};
+
 export const create = async (data) => {
+  const name = data.name?.trim();
+  const phone = normalizePhone(data.phone);
+  if (!name) throw { status: 400, message: 'Введите имя клиента' };
+  validatePhone(phone);
   return prisma.client.create({
     data: {
-      name: data.name?.trim(),
-      phone: data.phone?.trim(),
+      name,
+      phone,
       address: data.address?.trim() || null,
       note: data.note?.trim() || null,
     },
@@ -60,11 +69,13 @@ export const create = async (data) => {
 };
 
 export const update = async (id, data) => {
+  const phone = data.phone !== undefined ? normalizePhone(data.phone) : undefined;
+  if (phone !== undefined) validatePhone(phone);
   return prisma.client.update({
     where: { id },
     data: {
       ...(data.name && { name: data.name.trim() }),
-      ...(data.phone && { phone: data.phone.trim() }),
+      ...(phone !== undefined && { phone }),
       ...(data.address !== undefined && { address: data.address?.trim() || null }),
       ...(data.note !== undefined && { note: data.note?.trim() || null }),
     },

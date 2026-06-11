@@ -202,7 +202,7 @@ export default function Dashboard() {
                 <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} />
                 <YAxis tick={{ fontSize: 11, fill: "#94A3B8" }} tickLine={false} axisLine={false} tickFormatter={v => v >= 1000000 ? (v/1000000).toFixed(1) + "M" : v >= 1000 ? (v/1000).toFixed(0) + "K" : v} />
                 <Tooltip contentStyle={{ borderRadius: "8px", border: "1px solid #334155", backgroundColor: "#1E293B", color: "#F1F5F9", fontSize: "12px" }} cursor={{ stroke: "#4F46E5", strokeWidth: 1, strokeDasharray: "4 4" }} />
-                <Line type="monotone" dataKey="amount" stroke="#4F46E5" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: "#4F46E5", strokeWidth: 0 }} />
+                <Line type="monotone" dataKey="amount" stroke="#4F46E5" strokeWidth={2} dot={false} isAnimationActive={false} activeDot={{ r: 4, fill: "#4F46E5", strokeWidth: 0 }} />
               </LineChart>
             </ResponsiveContainer>
           </div>
