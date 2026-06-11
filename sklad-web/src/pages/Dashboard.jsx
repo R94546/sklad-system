@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { ShoppingCart, Users, CreditCard, Package, TrendingUp, AlertTriangle, X, ArrowRight, ExternalLink } from "lucide-react";
+import { ShoppingCart, Users, CreditCard, Package, TrendingUp, AlertTriangle, X, ArrowRight, ExternalLink, Boxes, Wallet, Clock } from "lucide-react";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid } from "recharts";
 import { useNavigate } from "react-router-dom";
 import api from "../api/axios";
@@ -27,16 +27,28 @@ function QuickModal({ open, onClose, title, children }) {
   );
 }
 
-const StatCard = ({ icon: Icon, label, value, color, bg, delay = "", onClick, show = true }) => {
+const Trend = ({ value }) => {
+  if (value == null || !isFinite(value)) return null;
+  const up = value >= 0;
+  return <span className={"text-[11px] font-semibold " + (up ? "text-emerald-500" : "text-red-500")}>{up ? "▲" : "▼"} {Math.abs(value).toFixed(0)}%</span>;
+};
+
+const StatCard = ({ icon: Icon, label, value, sub, trend, color, bg, delay = "", onClick, show = true }) => {
   if (!show) return null;
   return (
-    <div onClick={onClick} className={"bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-5 flex items-center gap-4 transition-none hover:shadow-md cursor-pointer animate-fade-in-up " + delay}>
+    <div onClick={onClick} className={"bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-5 flex items-center gap-4 transition-none hover:shadow-md animate-fade-in-up " + (onClick ? "cursor-pointer " : "") + delay}>
       <div className={"p-3 rounded-xl " + bg}><Icon size={22} className={color} /></div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wide">{label}</p>
         <p className="text-lg font-bold text-slate-800 dark:text-white mt-0.5">{value}</p>
+        {(sub || trend != null) && (
+          <div className="flex items-center gap-2 mt-0.5">
+            {trend != null && <Trend value={trend} />}
+            {sub && <span className="text-[11px] text-slate-400 truncate">{sub}</span>}
+          </div>
+        )}
       </div>
-      <ArrowRight size={16} className="text-slate-300 dark:text-slate-600 flex-shrink-0" />
+      {onClick && <ArrowRight size={16} className="text-slate-300 dark:text-slate-600 flex-shrink-0" />}
     </div>
   );
 };
@@ -86,6 +98,9 @@ export default function Dashboard() {
     return num.toLocaleString("ru-RU");
   };
 
+  const avgCheck = (amt, cnt) => cnt > 0 ? formatNum(amt / cnt) : "0";
+  const pct = (cur, prev) => prev > 0 ? ((cur - prev) / prev) * 100 : null;
+
   if (!data) return <DashboardSkeleton />;
 
   const hasChartData = chart.length > 0;
@@ -97,12 +112,85 @@ export default function Dashboard() {
         <p className="text-sm text-slate-400 dark:text-slate-500 mt-1">{new Date().toLocaleDateString("ru-RU", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</p>
       </div>
 
+      {/* KPI — продажи и прибыль */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <StatCard icon={ShoppingCart} label="Продажи сегодня" value={formatNum(data.today.amount)} bg="bg-indigo-50 dark:bg-indigo-500/10" color="text-indigo-600" delay="delay-100" onClick={isAdmin ? () => openModal("today") : undefined} />
-        <StatCard icon={TrendingUp} label="Продажи за месяц" value={formatNum(data.month.amount)} bg="bg-emerald-50 dark:bg-emerald-500/10" color="text-emerald-600" delay="delay-200" onClick={isAdmin ? () => openModal("month") : undefined} />
-        <StatCard icon={CreditCard} label="Общий долг" value={formatNum(data.totalDebt)} bg="bg-red-50 dark:bg-red-500/10" color="text-red-500" delay="delay-300" onClick={isAdmin ? () => openModal("debts") : undefined} show={isAdmin} />
-        <StatCard icon={Users} label="Клиенты" value={data.totalClients} bg="bg-violet-50 dark:bg-violet-500/10" color="text-violet-600" delay="delay-400" onClick={isAdmin ? () => openModal("clients") : undefined} />
+        <StatCard icon={ShoppingCart} label="Продажи сегодня" value={formatNum(data.today.amount) + " сом"}
+          sub={data.today.count + " чек · ср. " + avgCheck(data.today.amount, data.today.count)}
+          trend={pct(data.today.amount, data.prev?.today)}
+          bg="bg-indigo-50 dark:bg-indigo-500/10" color="text-indigo-600" delay="delay-100"
+          onClick={isAdmin ? () => openModal("today") : undefined} />
+        <StatCard icon={TrendingUp} label="Прибыль сегодня" value={formatNum(data.today.profit) + " сом"}
+          bg="bg-emerald-50 dark:bg-emerald-500/10" color="text-emerald-600" delay="delay-100" show={isAdmin} />
+        <StatCard icon={ShoppingCart} label="Продажи за месяц" value={formatNum(data.month.amount) + " сом"}
+          sub={data.month.count + " чек"} trend={pct(data.month.amount, data.prev?.month)}
+          bg="bg-blue-50 dark:bg-blue-500/10" color="text-blue-600" delay="delay-200"
+          onClick={isAdmin ? () => openModal("month") : undefined} />
+        <StatCard icon={TrendingUp} label="Прибыль за месяц" value={formatNum(data.month.profit) + " сом"}
+          bg="bg-teal-50 dark:bg-teal-500/10" color="text-teal-600" delay="delay-200" show={isAdmin} />
       </div>
+
+      {/* KPI — склад, долги, клиенты */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <StatCard icon={Boxes} label="Стоимость склада" value={formatNum(data.stockValue) + " сом"}
+          bg="bg-amber-50 dark:bg-amber-500/10" color="text-amber-600" delay="delay-300" show={isAdmin} />
+        <StatCard icon={CreditCard} label="Общий долг" value={formatNum(data.totalDebt) + " сом"}
+          bg="bg-orange-50 dark:bg-orange-500/10" color="text-orange-500" delay="delay-300"
+          onClick={isAdmin ? () => openModal("debts") : undefined} show={isAdmin} />
+        <StatCard icon={Clock} label="Просрочка" value={formatNum(data.overdue?.amount || 0) + " сом"}
+          sub={(data.overdue?.count || 0) + " долгов"}
+          bg="bg-red-50 dark:bg-red-500/10" color="text-red-500" delay="delay-400"
+          onClick={isAdmin ? () => openModal("debts") : undefined} show={isAdmin} />
+        <StatCard icon={Users} label="Клиенты" value={data.totalClients}
+          bg="bg-violet-50 dark:bg-violet-500/10" color="text-violet-600" delay="delay-400"
+          onClick={isAdmin ? () => openModal("clients") : undefined} />
+      </div>
+
+      {/* Касса + способы оплаты */}
+      {isAdmin && (
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 animate-fade-in-up delay-400">
+          <div onClick={() => navigate("/sessions")} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-5 flex items-center gap-4 cursor-pointer hover:shadow-md">
+            <div className="p-3 rounded-xl bg-emerald-50 dark:bg-emerald-500/10"><Wallet size={22} className="text-emerald-600" /></div>
+            <div className="flex-1 min-w-0">
+              <p className="text-xs text-slate-400 font-medium uppercase tracking-wide">Касса</p>
+              <p className="text-lg font-bold text-slate-800 dark:text-white mt-0.5">
+                {data.openSessions > 0
+                  ? <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /> {data.openSessions} откр. смен</span>
+                  : "Смены закрыты"}
+              </p>
+            </div>
+            <ArrowRight size={16} className="text-slate-300 dark:text-slate-600 flex-shrink-0" />
+          </div>
+          <div className="md:col-span-2 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 p-5">
+            <h2 className="text-sm font-semibold text-slate-700 dark:text-slate-200 mb-3">Способы оплаты (месяц)</h2>
+            {(() => {
+              const pm = data.payments || {};
+              const items = [
+                { k: "CASH", label: "Наличные", color: "bg-emerald-500" },
+                { k: "CARD", label: "Карта", color: "bg-blue-500" },
+                { k: "DEBT", label: "Долг", color: "bg-red-500" },
+                { k: "MIXED", label: "Смешанно", color: "bg-violet-500" },
+              ];
+              const sum = items.reduce((s, i) => s + (pm[i.k] || 0), 0) || 1;
+              return (
+                <div className="space-y-2">
+                  <div className="flex h-2.5 rounded-full overflow-hidden bg-slate-100 dark:bg-slate-700">
+                    {items.map(i => (pm[i.k] || 0) > 0 && <div key={i.k} className={i.color} style={{ width: ((pm[i.k] || 0) / sum * 100) + "%" }} />)}
+                  </div>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                    {items.map(i => (
+                      <div key={i.k} className="flex items-center gap-1.5 text-xs">
+                        <span className={"w-2.5 h-2.5 rounded-full flex-shrink-0 " + i.color} />
+                        <span className="text-slate-500 dark:text-slate-400">{i.label}</span>
+                        <span className="ml-auto font-semibold text-slate-700 dark:text-slate-300">{formatNum(pm[i.k] || 0)}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })()}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 animate-fade-in-up delay-300">
         {hasChartData && (

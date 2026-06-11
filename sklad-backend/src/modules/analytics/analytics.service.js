@@ -1,41 +1,66 @@
 ﻿import prisma from '../../config/db.js';
 
 export const getDashboard = async () => {
+  const now = new Date();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tomorrow = new Date(today);
   tomorrow.setDate(tomorrow.getDate() + 1);
-
+  const yesterday = new Date(today);
+  yesterday.setDate(yesterday.getDate() - 1);
   const monthStart = new Date(today.getFullYear(), today.getMonth(), 1);
+  const prevMonthStart = new Date(today.getFullYear(), today.getMonth() - 1, 1);
 
-  const [todaySales, monthSales, totalDebt, activeProducts, totalClients] = await Promise.all([
-    prisma.sale.aggregate({
-      where: { status: 'COMPLETED', createdAt: { gte: today, lt: tomorrow } },
-      _sum: { totalAmount: true },
-      _count: true,
-    }),
-    prisma.sale.aggregate({
-      where: { status: 'COMPLETED', createdAt: { gte: monthStart } },
-      _sum: { totalAmount: true },
-      _count: true,
-    }),
-    prisma.debt.aggregate({
-      where: { status: { in: ['PENDING', 'OVERDUE'] } },
-      _sum: { amount: true },
-    }),
-    // Сравнение двух полей (quantity <= minStock) Prisma where не умеет — фильтруем в JS
-    prisma.product.findMany({ where: { isActive: true }, select: { quantity: true, minStock: true } }),
+  const [
+    todaySales, monthSales, yesterdaySales, prevMonthSales,
+    totalDebtAgg, overdueDebts, activeProducts, totalClients,
+    monthCompleted, periodItems, openSessions,
+  ] = await Promise.all([
+    prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: today, lt: tomorrow } }, _sum: { totalAmount: true }, _count: true }),
+    prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: monthStart } }, _sum: { totalAmount: true }, _count: true }),
+    prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: yesterday, lt: today } }, _sum: { totalAmount: true } }),
+    prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: prevMonthStart, lt: monthStart } }, _sum: { totalAmount: true } }),
+    prisma.debt.aggregate({ where: { status: { in: ['PENDING', 'OVERDUE'] } }, _sum: { amount: true, paid: true } }),
+    // Просрочка: срок прошёл и долг не погашен (не зависит от того, отработал ли cron-джоб)
+    prisma.debt.findMany({ where: { status: { in: ['PENDING', 'OVERDUE'] }, dueDate: { lt: now } }, select: { amount: true, paid: true } }),
+    prisma.product.findMany({ where: { isActive: true }, select: { quantity: true, minStock: true, buyPrice: true } }),
     prisma.client.count(),
+    // Разбивка оборота по способам оплаты за месяц
+    prisma.sale.findMany({ where: { status: 'COMPLETED', createdAt: { gte: monthStart } }, select: { totalAmount: true, paymentType: true } }),
+    // Позиции завершённых продаж за месяц — для прибыли (факт. цена − закупка)
+    prisma.saleItem.findMany({ where: { sale: { status: 'COMPLETED', createdAt: { gte: monthStart } } }, select: { quantity: true, price: true, sale: { select: { createdAt: true } }, product: { select: { buyPrice: true } } } }),
+    prisma.cashSession.count({ where: { status: 'OPEN' } }),
   ]);
 
   const lowStockCount = activeProducts.filter((p) => p.quantity <= p.minStock).length;
+  const stockValue = activeProducts.reduce((s, p) => s + p.quantity * Number(p.buyPrice), 0);
+
+  const totalDebt = Number(totalDebtAgg._sum.amount || 0) - Number(totalDebtAgg._sum.paid || 0);
+  const overdueAmount = overdueDebts.reduce((s, d) => s + (Number(d.amount) - Number(d.paid)), 0);
+
+  const payments = { CASH: 0, CARD: 0, DEBT: 0, MIXED: 0 };
+  for (const s of monthCompleted) {
+    if (payments[s.paymentType] !== undefined) payments[s.paymentType] += Number(s.totalAmount);
+  }
+
+  let todayProfit = 0, monthProfit = 0;
+  for (const it of periodItems) {
+    const p = (Number(it.price) - Number(it.product?.buyPrice || 0)) * it.quantity;
+    monthProfit += p;
+    if (it.sale.createdAt >= today) todayProfit += p;
+  }
 
   return {
-    today: { amount: todaySales._sum.totalAmount || 0, count: todaySales._count },
-    month: { amount: monthSales._sum.totalAmount || 0, count: monthSales._count },
-    totalDebt: totalDebt._sum.amount || 0,
+    today: { amount: Number(todaySales._sum.totalAmount || 0), count: todaySales._count, profit: todayProfit },
+    month: { amount: Number(monthSales._sum.totalAmount || 0), count: monthSales._count, profit: monthProfit },
+    prev: { today: Number(yesterdaySales._sum.totalAmount || 0), month: Number(prevMonthSales._sum.totalAmount || 0) },
+    totalDebt,
+    overdue: { amount: overdueAmount, count: overdueDebts.length },
     lowStockCount,
     totalClients,
+    stockValue,
+    payments,
+    openSessions,
   };
 };
 
