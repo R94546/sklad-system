@@ -47,7 +47,7 @@ export default function SaleDetail() {
   return (
     <div className="max-w-2xl mx-auto space-y-4">
       <div className="flex items-center gap-3">
-        <button onClick={() => navigate('/sales')} className="p-2 hover:bg-slate-100 dark:bg-slate-700 rounded-lg transition-colors">
+        <button onClick={() => navigate(-1)} className="p-2 hover:bg-slate-100 dark:bg-slate-700 rounded-lg transition-colors">
           <ArrowLeft size={20} />
         </button>
         <h1 className="text-2xl font-bold text-slate-800 flex-1">Продажа #{sale.id.slice(-6).toUpperCase()}</h1>
