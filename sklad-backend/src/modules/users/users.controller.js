@@ -19,7 +19,7 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await usersService.create(req.body);
-    return success(res, data, 'Yaratildi', 201);
+    return success(res, data, 'Создано', 201);
   } catch (err) { next(err); }
 };
 
@@ -33,6 +33,6 @@ export const update = async (req, res, next) => {
 export const remove = async (req, res, next) => {
   try {
     await usersService.remove(req.params.id);
-    return success(res, null, 'Ochirildi');
+    return success(res, null, 'Удалено');
   } catch (err) { next(err); }
 };

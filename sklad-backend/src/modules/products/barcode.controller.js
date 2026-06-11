@@ -15,7 +15,7 @@ export const scan = async (req, res, next) => {
   try {
     const { barcode } = req.params;
     const product = await barcodeService.findByBarcode(barcode);
-    if (!product) return error(res, "Tovar topilmadi", 404);
+    if (!product) return error(res, "Товар не найден", 404);
     return success(res, product);
   } catch (err) { next(err); }
 };

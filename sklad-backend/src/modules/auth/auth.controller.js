@@ -4,16 +4,16 @@ import { success, error } from "../../utils/response.js";
 export const login = async (req, res, next) => {
   try {
     const { phone, password } = req.body;
-    if (!phone || !password) return error(res, "Telefon va parol kiritilsin", 400);
+    if (!phone || !password) return error(res, "Введите телефон и пароль", 400);
     const data = await authService.login(phone, password, req);
-    return success(res, data, "Muvaffaqiyatli kirildi");
+    return success(res, data, "Вход выполнен");
   } catch (err) { next(err); }
 };
 
 export const refresh = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
-    if (!refreshToken) return error(res, "Token kiritilsin", 400);
+    if (!refreshToken) return error(res, "Укажите токен", 400);
     const data = await authService.refresh(refreshToken);
     return success(res, data);
   } catch (err) { next(err); }
@@ -23,7 +23,7 @@ export const logout = async (req, res, next) => {
   try {
     const { refreshToken } = req.body;
     await authService.logout(refreshToken);
-    return success(res, null, "Chiqildi");
+    return success(res, null, "Выход выполнен");
   } catch (err) { next(err); }
 };
 
@@ -31,6 +31,6 @@ export const forceLogout = async (req, res, next) => {
   try {
     const { userId } = req.params;
     await authService.forceLogout(userId);
-    return success(res, null, "Foydalanuvchi chiqarildi");
+    return success(res, null, "Пользователь разлогинен");
   } catch (err) { next(err); }
 };

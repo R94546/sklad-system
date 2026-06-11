@@ -20,9 +20,9 @@ const generateTokens = (user) => {
 
 export const login = async (phone, password, req = null) => {
   const user = await prisma.user.findUnique({ where: { phone } });
-  if (!user || !user.isActive) throw { status: 401, message: "Foydalanuvchi topilmadi" };
+  if (!user || !user.isActive) throw { status: 401, message: "Пользователь не найден" };
   const isMatch = await bcrypt.compare(password, user.password);
-  if (!isMatch) throw { status: 401, message: "Parol notogri" };
+  if (!isMatch) throw { status: 401, message: "Неверный пароль" };
   const tokens = generateTokens(user);
   await prisma.refreshToken.create({ data: { token: tokens.refreshToken, userId: user.id } });
   await audit(user.id, "LOGIN", "User", user.id, null, null, req);
@@ -31,7 +31,7 @@ export const login = async (phone, password, req = null) => {
 
 export const refresh = async (token) => {
   const stored = await prisma.refreshToken.findUnique({ where: { token } });
-  if (!stored) throw { status: 401, message: "Token topilmadi" };
+  if (!stored) throw { status: 401, message: "Токен не найден" };
   try {
     const decoded = jwt.verify(token, env.JWT_REFRESH_SECRET);
     const user = await prisma.user.findUnique({ where: { id: decoded.id } });
@@ -40,7 +40,7 @@ export const refresh = async (token) => {
     await prisma.refreshToken.create({ data: { token: tokens.refreshToken, userId: user.id } });
     return tokens;
   } catch {
-    throw { status: 401, message: "Token yaroqsiz" };
+    throw { status: 401, message: "Недействительный токен" };
   }
 };
 

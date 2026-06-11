@@ -19,7 +19,7 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await clientsService.create(req.body);
-    return success(res, data, 'Yaratildi', 201);
+    return success(res, data, 'Создано', 201);
   } catch (err) { next(err); }
 };
 

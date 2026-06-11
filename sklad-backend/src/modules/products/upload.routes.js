@@ -23,7 +23,7 @@ router.delete('/', async (req, res, next) => {
   try {
     if (!req.body.url) return error(res, 'URL kerak', 400);
     await deleteImage(req.body.url);
-    return success(res, null, 'Rasm ochirildi');
+    return success(res, null, 'Изображение удалено');
   } catch (err) { next(err); }
 });
 

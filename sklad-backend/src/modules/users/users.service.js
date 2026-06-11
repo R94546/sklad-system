@@ -17,9 +17,9 @@ export const getById = async (id) => {
 };
 
 export const create = async (data) => {
-  if (!data.name?.trim()) throw { status: 400, message: 'Ism kiritilsin' };
-  if (!data.phone?.trim()) throw { status: 400, message: 'Telefon kiritilsin' };
-  if (!data.password) throw { status: 400, message: 'Parol kiritilsin' };
+  if (!data.name?.trim()) throw { status: 400, message: 'Введите имя' };
+  if (!data.phone?.trim()) throw { status: 400, message: 'Введите телефон' };
+  if (!data.password) throw { status: 400, message: 'Введите пароль' };
   const hashed = await bcrypt.hash(data.password, 10);
   return prisma.user.create({
     data: {

@@ -20,7 +20,7 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await salesService.create(req.body, req.user.id);
-    return success(res, data, 'Sotuv amalga oshirildi', 201);
+    return success(res, data, 'Продажа оформлена', 201);
   } catch (err) { next(err); }
 };
 

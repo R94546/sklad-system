@@ -22,7 +22,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', roleMiddleware('ADMIN'), async (req, res, next) => {
   try {
     const data = await prisma.category.create({ data: { name: req.body.name } });
-    return success(res, data, 'Yaratildi', 201);
+    return success(res, data, 'Создано', 201);
   } catch (err) { next(err); }
 });
 
@@ -38,7 +38,7 @@ router.delete('/:id', roleMiddleware('ADMIN'), async (req, res, next) => {
     const products = await prisma.product.count({ where: { categoryId: req.params.id } });
     if (products > 0) return error(res, 'Bu kategoriyada mahsulotlar bor', 400);
     await prisma.category.delete({ where: { id: req.params.id } });
-    return success(res, null, 'Ochirildi');
+    return success(res, null, 'Удалено');
   } catch (err) { next(err); }
 });
 

@@ -16,7 +16,7 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await productsService.create(req.body, req.file);
-    return success(res, data, 'Yaratildi', 201);
+    return success(res, data, 'Создано', 201);
   } catch (err) { next(err); }
 };
 export const update = async (req, res, next) => {
@@ -28,7 +28,7 @@ export const update = async (req, res, next) => {
 export const remove = async (req, res, next) => {
   try {
     await productsService.remove(req.params.id);
-    return success(res, null, 'Ochirildi');
+    return success(res, null, 'Удалено');
   } catch (err) { next(err); }
 };
 export const getLowStock = async (req, res, next) => {

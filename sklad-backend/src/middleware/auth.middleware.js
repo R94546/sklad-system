@@ -5,7 +5,7 @@ import { error } from '../utils/response.js';
 export const authMiddleware = (req, res, next) => {
   const authHeader = req.headers.authorization;
   if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return error(res, 'Token topilmadi', 401);
+    return error(res, 'Токен не найден', 401);
   }
   const token = authHeader.split(' ')[1];
   try {
@@ -13,6 +13,6 @@ export const authMiddleware = (req, res, next) => {
     req.user = decoded;
     next();
   } catch {
-    return error(res, 'Token yaroqsiz', 401);
+    return error(res, 'Недействительный токен', 401);
   }
 };
