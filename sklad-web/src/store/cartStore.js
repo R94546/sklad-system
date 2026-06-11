@@ -10,6 +10,19 @@ const upsert = (carts, c) => {
   return next;
 };
 
+// Prisma Decimal сериализуется в JSON строкой ("90") — приводим к числу,
+// иначе оптимистичное `quantity + 1` даёт конкатенацию ("90" + 1 = "901")
+const normCart = (c) =>
+  c && {
+    ...c,
+    totalAmount: Number(c.totalAmount ?? 0),
+    items: (c.items || []).map((it) => ({
+      ...it,
+      quantity: Number(it.quantity),
+      price: Number(it.price),
+    })),
+  };
+
 const useCartStore = create((set, get) => ({
   cart: null,        // активная корзина
   carts: [],         // все открытые чеки продавца (параллельные)
@@ -20,7 +33,7 @@ const useCartStore = create((set, get) => ({
   loadCarts: async () => {
     try {
       const r = await api.get("/sales/cart/all");
-      const carts = r.data.data || [];
+      const carts = (r.data.data || []).map(normCart);
       const cur = get().activeId;
       const active = carts.find((c) => c.id === cur) || carts[0] || null;
       set({ carts, activeId: active?.id || null, cart: active });
@@ -35,7 +48,7 @@ const useCartStore = create((set, get) => ({
   newCart: async () => {
     try {
       const r = await api.post("/sales/cart/new");
-      const c = r.data.data;
+      const c = normCart(r.data.data);
       set((s) => ({ carts: upsert(s.carts, c), activeId: c.id, cart: c }));
       return c;
     } catch {
@@ -65,9 +78,9 @@ const useCartStore = create((set, get) => ({
         if (idx === -1) {
           items.push({ id: "tmp-item-" + productId + "-" + Date.now(), productId, quantity, price: unitPrice, product });
         } else {
-          items[idx] = { ...items[idx], quantity: items[idx].quantity + quantity };
+          items[idx] = { ...items[idx], quantity: Number(items[idx].quantity) + Number(quantity) };
         }
-        cart.totalAmount = items.reduce((sum, it) => sum + Number(it.price) * it.quantity, 0);
+        cart.totalAmount = items.reduce((sum, it) => sum + Number(it.price) * Number(it.quantity), 0);
         return { cart, carts: upsert(s.carts, cart), activeId: cart.id };
       });
     }
@@ -75,7 +88,7 @@ const useCartStore = create((set, get) => ({
     // ---- Реальный запрос + сверка с авторитетным ответом сервера ----
     try {
       const r = await api.post("/sales/cart/add", { productId, quantity, price, saleId });
-      const c = r.data.data;
+      const c = normCart(r.data.data);
       set((s) => {
         const cleaned = s.carts.filter((x) => !String(x.id).startsWith("tmp-"));
         return { carts: upsert(cleaned, c), activeId: c.id, cart: { ...s.cart, ...c } };
@@ -91,7 +104,7 @@ const useCartStore = create((set, get) => ({
   removeItem: async (itemId) => {
     try {
       const r = await api.delete("/sales/cart/item/" + itemId);
-      const c = r.data.data;
+      const c = normCart(r.data.data);
       set((s) => ({ carts: upsert(s.carts, c), cart: s.activeId === c.id ? { ...s.cart, ...c } : s.cart }));
     } catch { /* игнорируем */ }
   },
@@ -99,7 +112,7 @@ const useCartStore = create((set, get) => ({
   updateItem: async (itemId, quantity) => {
     try {
       const r = await api.patch("/sales/cart/item/" + itemId, { quantity });
-      const c = r.data.data;
+      const c = normCart(r.data.data);
       set((s) => ({ carts: upsert(s.carts, c), cart: s.activeId === c.id ? { ...s.cart, ...c } : s.cart }));
     } catch { /* игнорируем */ }
   },
@@ -108,7 +121,7 @@ const useCartStore = create((set, get) => ({
   patchItem: async (itemId, data) => {
     try {
       const r = await api.patch("/sales/cart/item/" + itemId, data);
-      const c = r.data.data;
+      const c = normCart(r.data.data);
       set((s) => ({ carts: upsert(s.carts, c), cart: s.activeId === c.id ? { ...s.cart, ...c } : s.cart }));
       return true;
     } catch {
