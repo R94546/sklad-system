@@ -232,8 +232,11 @@ export const confirmCart = async (cartId, data) => {
       include: { client: true, user: true, items: { include: { product: true } } }
     });
 
-    if ((data.paymentType === "DEBT" || data.paymentType === "MIXED") && data.clientId) {
+    if (data.paymentType === "DEBT" || data.paymentType === "MIXED") {
+      if (!data.clientId) throw { status: 400, message: "Для долга выберите клиента" };
       const debtAmount = data.paymentType === "MIXED" ? Number(data.debtAmount || 0) : finalTotal;
+      if (debtAmount <= 0) throw { status: 400, message: "Сумма долга должна быть больше 0" };
+      if (debtAmount > finalTotal + 0.01) throw { status: 400, message: "Сумма долга больше суммы чека" };
       await tx.debt.create({ data: { saleId: cartId, clientId: data.clientId, amount: debtAmount, dueDate: new Date(data.dueDate || Date.now() + 30*24*60*60*1000) } });
     }
 

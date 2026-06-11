@@ -76,24 +76,52 @@ export const getLowStock = async () => {
 };
 
 export const getSalesChart = async (period = 'week') => {
-  const days = period === 'month' ? 30 : period === 'year' ? 365 : 7;
+  const now = new Date();
+
+  // Год — по месяцам (12 точек), чтобы график не был на 365 делений
+  if (period === 'year') {
+    const from = new Date(now.getFullYear(), now.getMonth() - 11, 1);
+    const sales = await prisma.sale.findMany({
+      where: { status: 'COMPLETED', createdAt: { gte: from } },
+      select: { totalAmount: true, createdAt: true },
+    });
+    const grouped = {};
+    for (const s of sales) {
+      const key = s.createdAt.getFullYear() + '-' + String(s.createdAt.getMonth() + 1).padStart(2, '0');
+      grouped[key] = (grouped[key] || 0) + Number(s.totalAmount);
+    }
+    const result = [];
+    for (let i = 0; i < 12; i++) {
+      const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
+      const key = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
+      result.push({ date: key, amount: grouped[key] || 0 });
+    }
+    return result;
+  }
+
+  // Неделя/месяц — по дням, с заполнением пропущенных дней нулями
+  const days = period === 'month' ? 30 : 7;
   const from = new Date();
-  from.setDate(from.getDate() - days);
+  from.setHours(0, 0, 0, 0);
+  from.setDate(from.getDate() - (days - 1));
 
   const sales = await prisma.sale.findMany({
     where: { status: 'COMPLETED', createdAt: { gte: from } },
     select: { totalAmount: true, createdAt: true },
-    orderBy: { createdAt: 'asc' },
   });
-
   const grouped = {};
   for (const sale of sales) {
     const date = sale.createdAt.toISOString().split('T')[0];
-    if (!grouped[date]) grouped[date] = 0;
-    grouped[date] += Number(sale.totalAmount);
+    grouped[date] = (grouped[date] || 0) + Number(sale.totalAmount);
   }
-
-  return Object.entries(grouped).map(([date, amount]) => ({ date, amount }));
+  const result = [];
+  for (let i = 0; i < days; i++) {
+    const d = new Date(from);
+    d.setDate(from.getDate() + i);
+    const key = d.toISOString().split('T')[0];
+    result.push({ date: key, amount: grouped[key] || 0 });
+  }
+  return result;
 };
 
 export const getTopProducts = async () => {

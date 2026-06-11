@@ -104,6 +104,7 @@ export default function Products() {
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(null);
   const [form, setForm] = useState({ name: "", categoryId: "", buyPrice: "", sellPrice: "", quantity: "", minStock: 10, unit: "PIECE", barcode: "" });
 
   const load = async () => {
@@ -188,8 +189,10 @@ export default function Products() {
     setSaving(false);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm("Удалить товар?")) return;
+  const handleDelete = (id) => setConfirmDelete(id);
+  const doDelete = async () => {
+    const id = confirmDelete;
+    setConfirmDelete(null);
     try { await api.delete("/products/" + id); toast.success("Удалено"); load(); }
     catch { toast.error("Ошибка"); }
   };
@@ -270,6 +273,14 @@ export default function Products() {
 
       {cartProduct && <AddToCartModal product={cartProduct} onClose={() => setCartProduct(null)} onAdd={async (productId, quantity) => { const ok = await addToCart(productId, quantity); if (ok) toast.success(cartProduct.name + " добавлен в корзину"); else toast.error("Ошибка"); }} />}
       <ProductDetailModal product={selected} onClose={() => setSelected(null)} onEdit={openEdit} onDelete={handleDelete} />
+
+      <Modal open={!!confirmDelete} onClose={() => setConfirmDelete(null)} title="Удалить товар?" size="sm">
+        <p className="text-sm text-slate-500 dark:text-slate-400">Товар будет деактивирован и скрыт из каталога.</p>
+        <div className="flex gap-3 pt-4">
+          <Button type="button" variant="outline" className="flex-1" onClick={() => setConfirmDelete(null)}>Отмена</Button>
+          <Button type="button" variant="danger" className="flex-1" onClick={doDelete}>Удалить</Button>
+        </div>
+      </Modal>
 
       <Modal open={modal} onClose={() => setModal(false)} title={editing ? "Редактировать товар" : "Новый товар"}>
         <form onSubmit={handleSubmit} className="space-y-4">
