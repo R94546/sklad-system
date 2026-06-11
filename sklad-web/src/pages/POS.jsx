@@ -134,7 +134,7 @@ export default function POS() {
   };
   const qtyInCart = (pid) => items.find((i) => i.productId === pid)?.quantity || 0;
 
-  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const total = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   const paid = payments.reduce((s, p) => s + p.amount, 0);
   const remaining = total - paid;
   const change = paid > total ? paid - total : 0;
@@ -185,7 +185,7 @@ export default function POS() {
   const applyBuffer = (b) => {
     if (!selectedItem) return;
     const num = parseFloat((b || "0").replace(",", ".")) || 0;
-    if (mode === "QTY") patchItem(selectedItem.id, { quantity: Math.max(0, Math.round(num)) });
+    if (mode === "QTY") patchItem(selectedItem.id, { quantity: Math.max(0, num) });
     else if (mode === "PRICE") patchItem(selectedItem.id, { price: Math.max(0, num) });
     else if (mode === "PERCENT") {
       let pct = num;
@@ -485,7 +485,7 @@ export default function POS() {
                         <p className="text-sm font-medium text-slate-800 dark:text-white truncate">{i.product?.name}</p>
                         <p className="text-xs text-slate-400">{fmt(i.price)} сом / {UNITS[i.product?.unit] || "шт"}</p>
                       </div>
-                      <span className="text-sm font-bold text-slate-800 dark:text-white whitespace-nowrap tabular-nums">{fmt(i.quantity * i.price)}</span>
+                      <span className="text-sm font-bold text-slate-800 dark:text-white whitespace-nowrap tabular-nums">{fmt(Number(i.quantity) * Number(i.price))}</span>
                       <button onClick={(e) => { e.stopPropagation(); removeItem(i.id); }} className="p-1 rounded text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition shrink-0">
                         <Trash2 size={15} />
                       </button>
@@ -569,8 +569,8 @@ export default function POS() {
                 <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2.5">
                   {filtered.map((p) => {
                     const inCart = qtyInCart(p.id);
-                    const out = p.quantity <= 0;
-                    const low = p.quantity > 0 && p.quantity <= (p.minStock || 0);
+                    const out = Number(p.quantity) <= 0;
+                    const low = Number(p.quantity) > 0 && Number(p.quantity) <= Number(p.minStock || 0);
                     return (
                       <button key={p.id} onClick={() => handleAdd(p)} disabled={out} className="relative bg-white dark:bg-slate-800 rounded-lg border border-slate-200/70 dark:border-slate-700 overflow-hidden text-left shadow-sm hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 transition disabled:opacity-40 disabled:hover:translate-y-0 flex flex-col">
                         {inCart > 0 && <span className="absolute top-1.5 left-1.5 z-10 min-w-[22px] h-[22px] px-1 bg-slate-900 text-white text-xs rounded-md flex items-center justify-center font-bold shadow">{inCart}</span>}

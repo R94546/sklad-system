@@ -31,14 +31,14 @@ return prisma.$transaction(async (tx) => {
     let totalAmount = 0;
     const normalizedItems = items.map(item => ({
       productId: item.productId,
-      quantity: parseInt(item.quantity),
+      quantity: Number(item.quantity),
       price: Number(item.price),
     }));
 
     for (const item of normalizedItems) {
       const product = await tx.product.findUnique({ where: { id: item.productId } });
       if (!product) throw { status: 404, message: 'Товар не найден' };
-      if (product.quantity < item.quantity) throw { status: 400, message: product.name + ': недостаточно на складе (остаток: ' + product.quantity + ')' };
+      if (Number(product.quantity) < item.quantity) throw { status: 400, message: product.name + ': недостаточно на складе (остаток: ' + product.quantity + ')' };
       totalAmount += item.price * item.quantity;
     }
 
@@ -178,7 +178,7 @@ export const addToCart = async (userId, productId, quantity, price, saleId) => {
   }
   
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
-  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const total = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   
   return prisma.sale.update({
     where: { id: cart.id },
@@ -194,7 +194,7 @@ export const removeFromCart = async (userId, itemId) => {
   if (!cart) throw { status: 404, message: "Корзина не найдена" };
   await prisma.saleItem.delete({ where: { id: itemId } });
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
-  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const total = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   return prisma.sale.update({ where: { id: cart.id }, data: { totalAmount: total }, include: { items: { include: { product: true } } } });
 };
 
@@ -220,7 +220,7 @@ export const confirmCart = async (cartId, data) => {
     // Привязка к открытой смене продавца (если открыта)
     const session = await tx.cashSession.findFirst({ where: { sellerId: cart.userId, status: "OPEN" } });
 
-    const total = cart.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const total = cart.items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
     const discountType = data.discountType || "AMOUNT";
     const discountVal = Number(data.discount || 0);
     const discountAmount = discountType === "PERCENT" ? (total * discountVal / 100) : discountVal;
@@ -280,7 +280,7 @@ export const kassaConfirm = async (saleId, data) => {
       }
     }
 
-    const total = sale.items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+    const total = sale.items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
     const finalTotal = total - Number(data.discount || 0);
     const updated = await tx.sale.update({
       where: { id: saleId },
@@ -318,7 +318,7 @@ export const updateCartItem = async (userId, itemId, quantity, price) => {
   const cart = await prisma.sale.findFirst({ where: { id: item.saleId, userId, status: "PENDING" } });
   if (!cart) throw { status: 404, message: "Корзина не найдена" };
   if (quantity !== undefined) {
-    const qty = parseInt(quantity);
+    const qty = Number(quantity);
     if (qty <= 0) { await prisma.saleItem.delete({ where: { id: itemId } }); }
     else { await prisma.saleItem.update({ where: { id: itemId }, data: { quantity: qty } }); }
   }
@@ -326,7 +326,7 @@ export const updateCartItem = async (userId, itemId, quantity, price) => {
     await prisma.saleItem.update({ where: { id: itemId }, data: { price: Number(price) } });
   }
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
-  const total = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const total = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   return prisma.sale.update({ where: { id: cart.id }, data: { totalAmount: total }, include: { items: { include: { product: true } } } });
 };
 

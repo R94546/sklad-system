@@ -32,8 +32,8 @@ export const getDashboard = async () => {
     prisma.cashSession.count({ where: { status: 'OPEN' } }),
   ]);
 
-  const lowStockCount = activeProducts.filter((p) => p.quantity <= p.minStock).length;
-  const stockValue = activeProducts.reduce((s, p) => s + p.quantity * Number(p.buyPrice), 0);
+  const lowStockCount = activeProducts.filter((p) => Number(p.quantity) <= Number(p.minStock)).length;
+  const stockValue = activeProducts.reduce((s, p) => s + Number(p.quantity) * Number(p.buyPrice), 0);
 
   const totalDebt = Number(totalDebtAgg._sum.amount || 0) - Number(totalDebtAgg._sum.paid || 0);
   const overdueAmount = overdueDebts.reduce((s, d) => s + (Number(d.amount) - Number(d.paid)), 0);
@@ -45,7 +45,7 @@ export const getDashboard = async () => {
 
   let todayProfit = 0, monthProfit = 0;
   for (const it of periodItems) {
-    const p = (Number(it.price) - Number(it.product?.buyPrice || 0)) * it.quantity;
+    const p = (Number(it.price) - Number(it.product?.buyPrice || 0)) * Number(it.quantity);
     monthProfit += p;
     if (it.sale.createdAt >= today) todayProfit += p;
   }
@@ -71,8 +71,8 @@ export const getLowStock = async () => {
     select: { id: true, name: true, quantity: true, minStock: true, unit: true, sellPrice: true },
   });
   return products
-    .filter((p) => p.quantity <= p.minStock)
-    .sort((a, b) => a.quantity - b.quantity);
+    .filter((p) => Number(p.quantity) <= Number(p.minStock))
+    .sort((a, b) => Number(a.quantity) - Number(b.quantity));
 };
 
 export const getSalesChart = async (period = 'week') => {
@@ -133,8 +133,8 @@ export const getTopProducts = async () => {
   const grouped = {};
   for (const item of items) {
     const g = grouped[item.productId] || (grouped[item.productId] = { name: item.product?.name || "Неизвестно", qty: 0, amount: 0 });
-    g.qty += item.quantity;
-    g.amount += Number(item.price) * item.quantity;
+    g.qty += Number(item.quantity);
+    g.amount += Number(item.price) * Number(item.quantity);
   }
   return Object.values(grouped)
     .map((g) => ({ name: g.name, totalSold: g.qty, totalAmount: g.amount }))
@@ -153,8 +153,8 @@ export const getTopProfitProducts = async () => {
   for (const item of items) {
     if (!item.product) continue;
     const g = grouped[item.productId] || (grouped[item.productId] = { name: item.product.name, unit: item.product.unit, qty: 0, profit: 0 });
-    g.qty += item.quantity;
-    g.profit += (Number(item.price) - Number(item.product.buyPrice)) * item.quantity;
+    g.qty += Number(item.quantity);
+    g.profit += (Number(item.price) - Number(item.product.buyPrice)) * Number(item.quantity);
   }
   return Object.values(grouped).sort((a, b) => b.profit - a.profit).slice(0, 10);
 };

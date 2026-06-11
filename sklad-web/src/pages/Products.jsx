@@ -39,7 +39,7 @@ function ProductDetailModal({ product, onEdit, onDelete, onClose }) {
             <div>
               <p className="text-lg font-bold text-slate-800 dark:text-white">{product.name}</p>
               <p className="text-sm text-slate-400">{product.category?.name}</p>
-              <Badge variant={product.quantity <= product.minStock ? "red" : "green"} className="mt-1">
+              <Badge variant={Number(product.quantity) <= Number(product.minStock) ? "red" : "green"} className="mt-1">
                 {product.quantity} {UNITS[product.unit]}
               </Badge>
             </div>
@@ -237,7 +237,7 @@ export default function Products() {
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map(p => {
-            const low = p.quantity <= p.minStock;
+            const low = Number(p.quantity) <= Number(p.minStock);
             return (
               <div key={p.id} onClick={() => setSelected(p)}
                 className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 flex gap-3 cursor-pointer hover:shadow-md hover:border-indigo-300 dark:hover:border-indigo-600 transition-all">
@@ -294,10 +294,10 @@ export default function Products() {
             <p className="text-xs text-amber-500">⚠ Цена продажи ниже цены прихода — продажа в убыток</p>
           )}
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Количество" type="number" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
+            <Input label="Количество" type="number" step="any" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
             <Select label="Единица" value={form.unit} onChange={e => setForm({...form, unit: e.target.value})} options={UNIT_OPTIONS} />
           </div>
-          <Input label="Мин. остаток" type="number" value={form.minStock} onChange={e => setForm({...form, minStock: e.target.value})} />
+          <Input label="Мин. остаток" type="number" step="any" value={form.minStock} onChange={e => setForm({...form, minStock: e.target.value})} />
           <div className="space-y-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Штрихкод</label>
             <div className="flex gap-2">

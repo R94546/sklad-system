@@ -151,7 +151,7 @@ export default function StockIn() {
             )}
           </div>
           <div className="grid grid-cols-2 gap-3">
-            <Input label="Кол-во" type="number" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
+            <Input label="Кол-во" type="number" step="any" value={form.quantity} onChange={e => setForm({...form, quantity: e.target.value})} required />
             <Input label="Цена прихода" type="number" value={form.price} onChange={e => setForm({...form, price: e.target.value})} required />
           </div>
           <Input label="Заметка" value={form.note} onChange={e => setForm({...form, note: e.target.value})} />

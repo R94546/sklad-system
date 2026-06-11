@@ -38,8 +38,8 @@ export const create = async (data, file) => {
       barcode,
       buyPrice: Number(data.buyPrice),
       sellPrice: Number(data.sellPrice),
-      quantity: has(data.quantity) ? parseInt(data.quantity) : 0,
-      minStock: has(data.minStock) ? parseInt(data.minStock) : 10,
+      quantity: has(data.quantity) ? Number(data.quantity) : 0,
+      minStock: has(data.minStock) ? Number(data.minStock) : 10,
       imageUrl: imageUrl ?? data.imageUrl ?? null,
     },
     include: { category: true },
@@ -57,8 +57,8 @@ export const update = async (id, data, file) => {
   if (data.barcode !== undefined) d.barcode = data.barcode || null;
   if (has(data.buyPrice)) d.buyPrice = Number(data.buyPrice);
   if (has(data.sellPrice)) d.sellPrice = Number(data.sellPrice);
-  if (has(data.quantity)) d.quantity = parseInt(data.quantity);
-  if (has(data.minStock)) d.minStock = parseInt(data.minStock);
+  if (has(data.quantity)) d.quantity = Number(data.quantity);
+  if (has(data.minStock)) d.minStock = Number(data.minStock);
   if (imageUrl !== undefined) d.imageUrl = imageUrl;
   else if (data.imageUrl !== undefined) d.imageUrl = data.imageUrl;
   return prisma.product.update({ where: { id }, data: d, include: { category: true } });
@@ -71,5 +71,5 @@ export const remove = async (id) => {
 export const getLowStock = async () => {
   // Только товары с остатком <= минимума (сравнение двух полей Prisma where не умеет)
   const products = await prisma.product.findMany({ where: { isActive: true }, include: { category: true } });
-  return products.filter((p) => p.quantity <= p.minStock).sort((a, b) => a.quantity - b.quantity);
+  return products.filter((p) => Number(p.quantity) <= Number(p.minStock)).sort((a, b) => Number(a.quantity) - Number(b.quantity));
 };

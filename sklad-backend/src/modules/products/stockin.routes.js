@@ -30,7 +30,7 @@ router.get('/', async (req, res, next) => {
 router.post('/', async (req, res, next) => {
   try {
     const { productId, quantity, price, note } = req.body;
-    const qty = parseInt(quantity);
+    const qty = Number(quantity);
     const priceNum = Number(price);
     // Валидация: иначе NaN испортит остаток/цену товара
     if (!productId) throw { status: 400, message: 'Выберите товар' };
@@ -40,7 +40,7 @@ router.post('/', async (req, res, next) => {
     const result = await prisma.$transaction(async (tx) => {
       const product = await tx.product.findUnique({ where: { id: productId } });
       if (!product) throw { status: 404, message: 'Товар не найден' };
-      const oldQty = product.quantity;
+      const oldQty = Number(product.quantity);
       const oldBuy = Number(product.buyPrice);
       // Средневзвешенная закупочная цена (если был положительный остаток)
       const newBuy = oldQty > 0 ? (oldQty * oldBuy + qty * priceNum) / (oldQty + qty) : priceNum;
@@ -66,12 +66,12 @@ router.put('/:id', async (req, res, next) => {
     const result = await prisma.$transaction(async (tx) => {
       const old = await tx.stockIn.findUnique({ where: { id: req.params.id } });
       if (!old) throw { status: 404, message: 'Приход не найден' };
-      const newQty = quantity !== undefined ? parseInt(quantity) : old.quantity;
+      const newQty = quantity !== undefined ? Number(quantity) : Number(old.quantity);
       const newPrice = price !== undefined ? Number(price) : Number(old.price);
       if (!Number.isFinite(newQty) || newQty <= 0) throw { status: 400, message: 'Количество должно быть больше 0' };
       if (!Number.isFinite(newPrice) || newPrice < 0) throw { status: 400, message: 'Некорректная цена' };
 
-      const delta = newQty - old.quantity;
+      const delta = newQty - Number(old.quantity);
       if (delta < 0) {
         // Уменьшение — атомарно, без ухода остатка в минус
         const upd = await tx.product.updateMany({

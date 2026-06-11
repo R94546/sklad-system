@@ -52,8 +52,8 @@ model Product {
   category   Category   @relation(fields: [categoryId], references: [id])
   buyPrice   Decimal
   sellPrice  Decimal
-  quantity   Int        @default(0)
-  minStock   Int        @default(10)
+  quantity   Decimal    @default(0)
+  minStock   Decimal    @default(10)
   unit       Unit       @default(PIECE)
   imageUrl   String?
   isActive   Boolean    @default(true)
@@ -124,7 +124,7 @@ model SaleItem {
   sale      Sale     @relation(fields: [saleId], references: [id])
   productId String
   product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
+  quantity  Decimal
   price     Decimal
 }
 
@@ -150,7 +150,7 @@ model StockIn {
   id        String   @id @default(uuid())
   productId String
   product   Product  @relation(fields: [productId], references: [id])
-  quantity  Int
+  quantity  Decimal
   price     Decimal
   note      String?
   userId    String

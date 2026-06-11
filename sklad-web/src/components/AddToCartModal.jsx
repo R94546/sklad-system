@@ -10,7 +10,7 @@ export default function AddToCartModal({ product, onClose, onAdd }) {
 
   if (!product) return null;
 
-  const qty = Math.max(1, parseInt(quantity) || 1);
+  const qty = Math.max(0, parseFloat(quantity) || 0);
   const prc = parseFloat(price) || 0;
   const total = qty * prc;
 
@@ -37,9 +37,9 @@ export default function AddToCartModal({ product, onClose, onAdd }) {
             <div className="flex flex-col gap-1">
               <label className="text-xs font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wide">Кол-во</label>
               <div className="flex items-center border border-slate-300 dark:border-slate-600 rounded-lg overflow-hidden">
-                <button onClick={() => setQuantity(String(Math.max(1, qty - 1)))} className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg font-bold">−</button>
-                <input type="number" value={quantity} onChange={e => setQuantity(e.target.value)} onBlur={() => setQuantity(String(Math.max(1, parseInt(quantity) || 1)))} className="flex-1 text-center text-sm font-medium bg-transparent text-slate-800 dark:text-white outline-none py-2" min="1" max={product.quantity} />
-                <button onClick={() => setQuantity(String(Math.min(product.quantity, qty + 1)))} className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg font-bold">+</button>
+                <button onClick={() => setQuantity(String(Math.max(0, qty - 1)))} className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg font-bold">−</button>
+                <input type="number" step="any" value={quantity} onChange={e => setQuantity(e.target.value)} onBlur={() => setQuantity(String(Math.max(0, parseFloat(quantity) || 0)))} className="flex-1 text-center text-sm font-medium bg-transparent text-slate-800 dark:text-white outline-none py-2" min="0" max={product.quantity} />
+                <button onClick={() => setQuantity(String(Math.min(Number(product.quantity), qty + 1)))} className="px-3 py-2 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 text-lg font-bold">+</button>
               </div>
             </div>
             <div className="flex flex-col gap-1">
@@ -53,7 +53,7 @@ export default function AddToCartModal({ product, onClose, onAdd }) {
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="flex-1" onClick={onClose}>Отмена</Button>
-            <Button className="flex-1" onClick={() => { onAdd(product.id, qty, prc); onClose(); }}>
+            <Button className="flex-1" disabled={qty <= 0} onClick={() => { onAdd(product.id, qty, prc); onClose(); }}>
               <ShoppingCart size={15} /> Добавить
             </Button>
           </div>
