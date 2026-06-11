@@ -109,9 +109,41 @@
 - ✅ **Сверка POS с эталоном Odoo (СЕССИЯ 2026-06-09):** по 18 скриншотам `Images/sklad_oddo_screens/` проверены экраны — навбар (Регистрация/Заказы/➕/№), чек+клавиатура (Кол-во/%/Цена), сетка товаров с бейджами, экран оплаты (способы, +быстрые суммы, список платежей, Осталось/Сдача), экран подтверждения (Выплаченная сумма + Печать/Отправить чек/Продолжить), «Заказы» с фильтром статусов, выбор/создание клиента, открытие/закрытие смены. Все совпадают с эталоном. Переведена последняя английская кнопка «Send Receipt» → «Отправить чек» (`POS.jsx`). Весь POS-UI теперь полностью русский.
 - ✅ **Волна чистки eslint (СЕССИЯ 2026-06-10):** было 10 ошибок + 9 warnings → стало **0 ошибок + 1 warning**. Исправлено: `Analytics.jsx` (убрано мёртвое состояние `loading` в основном компоненте → ушли set-state-in-effect и unused-var; disable set-state в модалках `SaleDetailModal`/`SellerModal`; пустой catch прокомментирован), `Cart.jsx` (убран неиспользуемый `removeItem`), `BarcodeScanner.jsx` (исправлен react-hooks/immutability — `stopScanner` поднят над `useEffect`; убраны неиспользуемые `err`; пустой catch прокомментирован; заодно переведены 3 узбекские строки → русский: «Сканер штрихкода», «Наведите штрихкод на камеру…», «Камера не открылась. Дайте разрешение.»), `Dashboard.jsx` (добавлен `isAdmin` в deps). Удалены устаревшие `// eslint-disable react-hooks/exhaustive-deps` в `Sales`/`SaleDetail`/`StockIn`/`Categories`/`Debts`/`Users` (правило больше не срабатывало). **Единственный оставшийся warning — `MainLayout.jsx:33` (fetchCart в deps), его НЕ трогаем по правилу проекта.** Проверено: `eslint` ✓ (0 ошибок), `vite build` ✓.
 
-### Дальше — БОСКИЧ 7–8: mobile (Expo), desktop (Electron). StockReceipt (партийная приёмка) — опционально, дублирует существующий StockIn. SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
+### БОСКИЧ — Аудит-ревью + дофиксы (СЕССИЯ 2026-06-11) ✅
+Большое ревью логики/UX по всем доменам (см. `REVIEW_CHECKLIST.md` — детальный чек-лист с отметками). Сделано:
 
-> Все плановые миграции выполнены через `db push` в prod (только добавления): CashSession, CashMovement, Sale.sessionId, User.maxDiscountPercent/canEditPrice, **Sale.number (autoincrement, старт 1001) + Sale.note**. Долг клиента — агрегатом (без колонки). Остаются по ТЗ §2 (опционально): Payment[] (раздельный учёт оплат), StockReceipt.
+**🔴 Целостность денег/склада (backend):**
+- `confirmCart`/`kassaConfirm` обёрнуты в `prisma.$transaction`; списание остатка — **атомарным условным decrement** (`updateMany where quantity>=qty`, проверка `count`) → защита от ухода в минус и гонки параллельных чеков. Проверено вживую (перепродажа отклоняется без минуса).
+- `cancel`/`remove`/`kassaReturn` — транзакция + возврат остатка только для `COMPLETED` (раньше PENDING/отменённые задваивали склад); `remove` чистит связанный долг.
+- Приход: валидация (qty>0, price≥0, товар существует) — раньше пустое поле давало `NaN` и портило остаток.
+- Аналитика: `top-products`/`top-profit` фильтруют `status=COMPLETED` (раньше считали корзины/отмены); прибыль по фактической `SaleItem.price`.
+
+**🟠 Архитектура/важное:**
+- `sales`/`analytics`/`stockin` переведены на **синглтон** `config/db.js` (раньше свои `PrismaClient` → утечка пула).
+- **Все** backend-сообщения русифицированы (auth/sales/products/categories/clients/users/barcode/upload/middleware).
+- `products.update` — баг «нельзя выставить 0» исправлен; `getLowStock` фильтрует `quantity<=minStock`; `getSellerDashboard` без PENDING.
+- **Приход: правка/удаление** (`PUT/DELETE /stockin/:id`) с откатом остатка атомарно + UI; **средневзвешенная** `buyPrice`.
+- **Аудит**: `audit()` на SALE_CONFIRM/CANCEL/RETURN/DELETE и STOCK_IN/EDIT/DELETE (раньше только LOGIN).
+
+**🧭 Панель (Dashboard) — переработана в стиле Odoo:** прибыль сегодня/месяц (факт. цена−закупка), средний чек, тренд ↑↓% vs прошлый период, стоимость склада (Σ остаток×закупка), просрочка, разбивка оборота по оплатам (stacked-бар), индикатор открытых смен.
+
+**⚡ UX:**
+- POS: оптимистичное добавление товара (мгновенно, БД 3-8с скрыта).
+- **Частый разлогин устранён**: `JWT_EXPIRES_IN` 2мин→1д + single-flight refresh (гонка ротации refresh-токена).
+- **Кнопка «Назад» на всех экранах** (шапка MainLayout, `navigate(-1)`), закрытие модалок по **Escape** (клик по фону уже работал).
+- **Экран «Товары» в стиле Odoo** — kanban-карточки + фильтр-чипы категорий + debounce поиска.
+- Убраны дубли навигации: страницы «Продажи» (=«Заказы» в POS) и «Корзина» (=параллельные чеки в POS).
+- Мелочи: единицы прихода (`+5 шт`), предупреждение об убытке, нули в графике, confirm→модал, удаление товара/прихода через модал.
+
+**🏗️ Архитектура:**
+- **Code-splitting** (React.lazy): главный бандл 2073→263 кБ.
+- **Дробные количества** (`Int→Decimal` миграция в prod): можно продавать/принимать 1.5 кг. `parseInt`→`Number` + обёртка `Number()` по всему коду; поля `step="any"`; POS-клавиатура без округления. Таймауты транзакций подняты (medленная БД Railway).
+
+**Проверено:** `eslint` ✓ (0 ошибок), `vite build` ✓ (263 кБ), множество live-тестов через API (продажа дробного кол-ва, перепродача-отказ, приход/правка/удаление, аналитика, аудит). 13 коммитов.
+
+### Дальше — БОСКИЧ 7–8: mobile (Expo), desktop (Electron). Опционально: `Payment[]` (раздельный учёт нал+карта, сдача — нужна миграция), тесты (vitest), слой валидации (zod), timezone аналитики (нужен TZ магазина). SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
+
+> Миграции `db push` в prod (без потерь): CashSession, CashMovement, Sale.sessionId, User.maxDiscountPercent/canEditPrice, Sale.number (старт 1001)+Sale.note, **Product.quantity/minStock + SaleItem.quantity + StockIn.quantity → Decimal (2026-06-11)**. Долг клиента — агрегатом. Остаётся опционально: Payment[], StockReceipt.
 
 ---
 
@@ -122,5 +154,5 @@
 
 ## 📌 Правила
 - Язык интерфейса POS — русский. Модели Prisma не переименовывать (Sale/SaleItem/Client/Debt/StockIn/Settings…).
-- Sidebar / MainLayout не трогать. POS остаётся внутри MainLayout.
+- Sidebar / MainLayout — менять только по явной просьбе (2026-06-11 добавлена кнопка «Назад» в шапку + убран индикатор корзины). POS остаётся внутри MainLayout.
 - Эталон дизайна — `Images/sklad_oddo_screens/`. ТЗ — `tz,plan/SKLAD_TZ.md`, анализ Odoo — `tz,plan/ODOO_ANALIZ.md`.
