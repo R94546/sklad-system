@@ -1,5 +1,5 @@
 ﻿import * as salesService from './sales.service.js';
-import { remove, updateSale, getCart, getCarts, createCart, addToCart, removeFromCart, confirmCart, sendToKassa, getKassaQueue, kassaConfirm, kassaReturn } from './sales.service.js';
+import { remove, updateSale, getCart, getCarts, createCart, addToCart, removeFromCart, confirmCart } from './sales.service.js';
 import { success, error } from '../../utils/response.js';
 import { audit } from '../../utils/audit.js';
 
@@ -42,11 +42,6 @@ export const createCartHandler = async (req, res, next) => { try { const data = 
 export const addToCartHandler = async (req, res, next) => { try { const data = await addToCart(req.user.id, req.body.productId, req.body.quantity || 1, req.body.price, req.body.saleId); return success(res, data); } catch (err) { next(err); } };
 export const removeFromCartHandler = async (req, res, next) => { try { const data = await removeFromCart(req.user.id, req.params.itemId); return success(res, data); } catch (err) { next(err); } };
 export const confirmCartHandler = async (req, res, next) => { try { const data = await confirmCart(req.params.id, req.body); await audit(req.user.id, 'SALE_CONFIRM', 'Sale', data.id, null, { number: data.number, total: data.totalAmount, paymentType: data.paymentType }, req); return success(res, data); } catch (err) { next(err); } };
-
-export const sendToKassaHandler = async (req, res, next) => { try { const data = await sendToKassa(req.params.id); return success(res, data); } catch (err) { next(err); } };
-export const getKassaQueueHandler = async (req, res, next) => { try { const data = await getKassaQueue(); return success(res, data); } catch (err) { next(err); } };
-export const kassaConfirmHandler = async (req, res, next) => { try { const data = await kassaConfirm(req.params.id, req.body); return success(res, data); } catch (err) { next(err); } };
-export const kassaReturnHandler = async (req, res, next) => { try { const data = await kassaReturn(req.params.id, req.body.reason); await audit(req.user.id, 'SALE_RETURN', 'Sale', req.params.id, null, { reason: req.body.reason }, req); return success(res, data); } catch (err) { next(err); } };
 
 export const updateCartItemHandler = async (req, res, next) => {
   try {

@@ -18,7 +18,6 @@ const StockIn = lazy(() => import('./pages/StockIn'));
 const Settings = lazy(() => import('./pages/Settings'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const POS = lazy(() => import('./pages/POS'));
-const Kassa = lazy(() => import('./pages/Kassa'));
 const Sessions = lazy(() => import('./pages/Sessions'));
 
 const PageLoader = () => (
@@ -58,7 +57,6 @@ export default function App() {
           <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
           <Route path="/sessions" element={<AdminRoute><Sessions /></AdminRoute>} />
           <Route path="/pos" element={<PrivateRoute><POS /></PrivateRoute>} />
-          <Route path="/kassa" element={<PrivateRoute><Kassa /></PrivateRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

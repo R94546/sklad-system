@@ -3,13 +3,12 @@ import { useState } from "react";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import toast from "react-hot-toast";
-import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Landmark, Wallet, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Wallet, ArrowLeft } from "lucide-react";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Панель" },
   { path: "/products", icon: Package, label: "Товары" },
   { path: "/stockin", icon: PackagePlus, label: "Приём", adminOnly: true },
-  { path: "/kassa", icon: Landmark, label: "Касса", kassirOnly: true },
   { path: "/pos", icon: ShoppingCart, label: "Продажа (POS)" },
   { path: "/clients", icon: Users, label: "Клиенты" },
   { path: "/debts", icon: CreditCard, label: "Долги" },
@@ -48,7 +47,7 @@ export default function MainLayout({ children }) {
         </div>
 
         <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-          {navItems.filter(item => (!item.adminOnly || user?.role === "ADMIN") && (!item.kassirOnly || user?.role === "KASSIR" || user?.role === "ADMIN")).map(({ path, icon: Icon, label }) => {
+          {navItems.filter(item => !item.adminOnly || user?.role === "ADMIN").map(({ path, icon: Icon, label }) => {
             const active = location.pathname === path;
             return (
               <Link key={path} to={path} onClick={() => setOpen(false)}
