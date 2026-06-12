@@ -1,9 +1,46 @@
 import { useState, useEffect } from "react";
-import { X, Banknote, ArrowDownCircle, ArrowUpCircle, LogOut } from "lucide-react";
+import { X, Banknote, ArrowDownCircle, ArrowUpCircle, LogOut, Lock, RefreshCw } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString("ru-RU");
+
+/* ===== Касса закрыта (экран продавца): открыть может только админ ===== */
+export function KassaClosedScreen({ onConnected, onExit }) {
+  const [checking, setChecking] = useState(false);
+
+  const recheck = async () => {
+    setChecking(true);
+    try {
+      const r = await api.get("/sessions/current");
+      if (r.data.data) { toast.success("Касса открыта — подключено"); onConnected(r.data.data); }
+      else toast.error("Касса ещё не открыта");
+    } catch { toast.error("Ошибка"); }
+    setChecking(false);
+  };
+
+  return (
+    <div className="fixed inset-0 z-[80] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4 text-center">
+        <div className="w-14 h-14 mx-auto rounded-full bg-slate-100 dark:bg-slate-700 flex items-center justify-center">
+          <Lock size={26} className="text-slate-400" />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800 dark:text-white">Касса закрыта</h2>
+        <p className="text-sm text-slate-500 dark:text-slate-400">
+          Кассу открывает администратор. Когда касса будет открыта, нажмите «Подключиться».
+        </p>
+        <div className="flex gap-3 pt-1">
+          <button onClick={onExit} className="flex items-center justify-center gap-2 px-4 py-3 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+            <LogOut size={16} /> Выйти
+          </button>
+          <button onClick={recheck} disabled={checking} className="flex-1 flex items-center justify-center gap-2 py-3 rounded-xl bg-[#714B67] hover:bg-[#5d3d54] text-white font-bold transition disabled:opacity-50">
+            <RefreshCw size={16} className={checking ? "animate-spin" : ""} /> Подключиться
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 /* ===== Открытие кассы (обязательно при входе в POS) ===== */
 export function OpenSessionModal({ onOpened, onCancel }) {

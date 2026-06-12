@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { Badge } from "../components/ui";
-import { X, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { X, ArrowDownCircle, ArrowUpCircle, Lock, Unlock, RotateCcw } from "lucide-react";
+import { OpenSessionModal, CloseSessionModal } from "../components/SessionModals";
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString("ru-RU");
 const PAY = { CASH: "Наличные", CARD: "Карта", DEBT: "Долг", MIXED: "Смешанная" };
@@ -19,15 +20,22 @@ function Avatar({ name }) {
 
 export default function Sessions() {
   const [sessions, setSessions] = useState([]);
+  const [current, setCurrent] = useState(null);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState("ALL");
   const [detailId, setDetailId] = useState(null);
+  const [showOpen, setShowOpen] = useState(false);
+  const [showClose, setShowClose] = useState(false);
 
   const load = async () => {
     setLoading(true);
     try {
-      const r = await api.get("/sessions" + (filter !== "ALL" ? "?status=" + filter : ""));
+      const [r, c] = await Promise.all([
+        api.get("/sessions" + (filter !== "ALL" ? "?status=" + filter : "")),
+        api.get("/sessions/current"),
+      ]);
       setSessions(r.data.data || []);
+      setCurrent(c.data.data || null);
     } catch { toast.error("Ошибка загрузки"); }
     setLoading(false);
   };
@@ -35,14 +43,28 @@ export default function Sessions() {
   // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [filter]);
 
+  const reopen = async (e, s) => {
+    e.stopPropagation();
+    if (!confirm("Переоткрыть кассу от " + new Date(s.openedAt).toLocaleString("ru-RU") + "? Итоги закрытия будут сброшены.")) return;
+    try {
+      await api.post("/sessions/" + s.id + "/reopen");
+      toast.success("Касса переоткрыта");
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || "Ошибка"); }
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Смены (кассы)</h1>
-        <div className="flex gap-1.5">
+        <div className="flex gap-1.5 items-center">
           {[["ALL", "Все"], ["OPEN", "Открытые"], ["CLOSED", "Закрытые"]].map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)} className={"px-3 py-1.5 text-sm rounded-lg font-medium transition " + (filter === v ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700")}>{l}</button>
           ))}
+          {!loading && (current
+            ? <button onClick={() => setShowClose(true)} className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg font-medium bg-rose-600 hover:bg-rose-700 text-white transition"><Lock size={14} /> Закрыть кассу</button>
+            : <button onClick={() => setShowOpen(true)} className="flex items-center gap-2 px-3 py-1.5 text-sm rounded-lg font-medium bg-emerald-600 hover:bg-emerald-700 text-white transition"><Unlock size={14} /> Открыть кассу</button>
+          )}
         </div>
       </div>
 
@@ -84,7 +106,16 @@ export default function Sessions() {
                       <span className={s.difference === 0 ? "text-emerald-500" : "text-rose-500 font-semibold"}>{s.difference > 0 ? "+" : ""}{fmt(s.difference)}</span>
                     ) : "—"}
                   </td>
-                  <td className="px-4 py-3 text-right text-xs text-indigo-500">Детали →</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-2">
+                      {s.status === "CLOSED" && !current && (
+                        <button onClick={(e) => reopen(e, s)} title="Переоткрыть для исправления" className="flex items-center gap-1 px-2 py-1 text-xs rounded-md text-amber-600 hover:bg-amber-50 dark:hover:bg-amber-500/10 border border-amber-200 dark:border-amber-500/30 transition">
+                          <RotateCcw size={12} /> Переоткрыть
+                        </button>
+                      )}
+                      <span className="text-xs text-indigo-500">Детали →</span>
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -93,6 +124,8 @@ export default function Sessions() {
       </div>
 
       {detailId && <SessionDetail id={detailId} onClose={() => setDetailId(null)} />}
+      {showOpen && <OpenSessionModal onOpened={() => { setShowOpen(false); load(); }} onCancel={() => setShowOpen(false)} />}
+      {showClose && current && <CloseSessionModal session={current} onClose={() => setShowClose(false)} onClosed={() => { setShowClose(false); load(); }} />}
     </div>
   );
 }

@@ -4,6 +4,9 @@ import api from '../api/axios';
 import toast from 'react-hot-toast';
 import { Button, Input, Select, Modal, Table } from '../components/ui';
 import BarcodeScanner from '../components/BarcodeScanner';
+import ViewToggle from '../components/ViewToggle';
+import { getSavedView, saveView } from '../utils/viewPref';
+import useBarcodeScanner from '../hooks/useBarcodeScanner';
 
 const UNITS = { PIECE: 'шт', KG: 'кг', METER: 'м', LITER: 'л', BOX: 'кор' };
 
@@ -18,6 +21,9 @@ export default function StockIn() {
   const [showScanner, setShowScanner] = useState(false);
   const [form, setForm] = useState({ productId: '', quantity: '', price: '', note: '' });
   const [selectedProduct, setSelectedProduct] = useState(null);
+  const [view, setView] = useState(() => getSavedView('stockin', 'list'));
+
+  const changeView = (v) => { setView(v); saveView('stockin', v); };
 
   const load = async () => {
     setLoading(true);
@@ -52,6 +58,17 @@ export default function StockIn() {
     setSelectedProduct(product || null);
     setForm(f => ({ ...f, productId: e.target.value, price: product?.buyPrice || '' }));
   };
+
+  // Сканер-пистолет: открывает форму прихода и подставляет товар по штрихкоду
+  useBarcodeScanner((code) => {
+    if (!modal) {
+      setEditing(null);
+      setForm({ productId: '', quantity: '', price: '', note: '' });
+      setSelectedProduct(null);
+      setModal(true);
+    }
+    handleScan(code);
+  }, { enabled: !editing });
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -116,10 +133,38 @@ export default function StockIn() {
     <div className="space-y-4">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Приход товара</h1>
-        <Button onClick={openCreate}><Plus size={16} /> Оформить приход</Button>
+        <div className="flex items-center gap-2">
+          <ViewToggle view={view} onChange={changeView} />
+          <Button onClick={openCreate}><Plus size={16} /> Оформить приход</Button>
+        </div>
       </div>
 
-      <Table columns={columns} data={stockins} loading={loading} emptyText="Приходов нет" />
+      {view === 'list' ? (
+        <Table columns={columns} data={stockins} loading={loading} emptyText="Приходов нет" />
+      ) : loading ? (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-32 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 animate-pulse" />)}
+        </div>
+      ) : stockins.length === 0 ? (
+        <p className="text-center text-slate-400 py-12">Приходов нет</p>
+      ) : (
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+          {stockins.map(row => (
+            <div key={row.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-1.5">
+              <div className="flex items-start justify-between gap-2">
+                <p className="font-semibold text-slate-800 dark:text-white text-sm leading-tight line-clamp-2">{row.product?.name}</p>
+                <div className="flex items-center gap-0.5 flex-shrink-0">
+                  <button onClick={() => openEdit(row)} className="p-1 text-slate-400 hover:text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="Изменить"><Pencil size={14} /></button>
+                  <button onClick={() => setConfirmDel(row)} className="p-1 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-lg" title="Удалить"><Trash2 size={14} /></button>
+                </div>
+              </div>
+              <p className="text-sm font-medium text-green-600">+{row.quantity} {UNITS[row.product?.unit] || row.product?.unit} · {Number(row.price).toLocaleString('ru-RU')} сом</p>
+              <p className="text-sm font-bold text-slate-800 dark:text-white">{(Number(row.price) * row.quantity).toLocaleString('ru-RU')} сом</p>
+              <p className="text-[11px] text-slate-400">{new Date(row.createdAt).toLocaleDateString('ru-RU')} · {row.user?.name}{row.note ? ' · ' + row.note : ''}</p>
+            </div>
+          ))}
+        </div>
+      )}
 
       {showScanner && <BarcodeScanner onScan={handleScan} onClose={() => setShowScanner(false)} />}
 

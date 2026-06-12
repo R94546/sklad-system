@@ -220,12 +220,14 @@ export const confirmCart = async (cartId, data) => {
         data: { quantity: { decrement: item.quantity } },
       });
       if (res.count === 0) {
-        throw { status: 400, message: `${item.product.name}: недостаточно на складе (остаток: ${item.product.quantity})` };
+        const have = Number(item.product.quantity);
+        const need = Number(item.quantity);
+        throw { status: 400, message: `Не хватает товара «${item.product.name}»: в наличии ${have.toLocaleString('ru-RU')}, нужно ${need.toLocaleString('ru-RU')} (не хватает ${(need - have).toLocaleString('ru-RU')})` };
       }
     }
 
-    // Привязка к открытой смене продавца (если открыта)
-    const session = await tx.cashSession.findFirst({ where: { sellerId: cart.userId, status: "OPEN" } });
+    // Привязка к открытой кассе магазина (касса одна, открывает админ)
+    const session = await tx.cashSession.findFirst({ where: { status: "OPEN" } });
 
     const total = cart.items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
     const discountType = data.discountType || "AMOUNT";

@@ -13,7 +13,8 @@ import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import BarcodeScanner from "../components/BarcodeScanner";
 import OrdersView from "../components/OrdersView";
-import { OpenSessionModal, CloseSessionModal, CashMovementModal } from "../components/SessionModals";
+import { OpenSessionModal, CloseSessionModal, CashMovementModal, KassaClosedScreen } from "../components/SessionModals";
+import useBarcodeScanner from "../hooks/useBarcodeScanner";
 import toast from "react-hot-toast";
 
 const UNITS = { PIECE: "шт", KG: "кг", METER: "м", LITER: "л", BOX: "кор" };
@@ -167,6 +168,9 @@ export default function POS() {
       toast.error("Товар не найден: " + code);
     }
   };
+
+  // Сканер-пистолет (клавиатурный): товар сразу в чек, без фокуса на поле поиска
+  useBarcodeScanner((code) => { setSearch(""); handleScan(code); }, { enabled: view === "register" });
 
   // ===== Клавиатура чека =====
   const selectLine = (id) => {
@@ -460,12 +464,14 @@ export default function POS() {
                     <RefreshCw size={16} /> Обновить данные
                   </button>
                   <div className="h-px bg-white/10 my-1" />
-                  <button onClick={() => { setMenuOpen(false); session ? setShowCashMove(true) : toast.error("Сначала откройте кассу"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
+                  <button onClick={() => { setMenuOpen(false); session ? setShowCashMove(true) : toast.error("Касса не открыта"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
                     <Wallet size={16} /> Поступления / выплаты
                   </button>
-                  <button onClick={() => { setMenuOpen(false); session ? setShowClose(true) : toast.error("Касса не открыта"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition text-rose-300">
-                    <LogOut size={16} /> Закрыть кассу
-                  </button>
+                  {isAdmin && (
+                    <button onClick={() => { setMenuOpen(false); session ? setShowClose(true) : toast.error("Касса не открыта"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition text-rose-300">
+                      <LogOut size={16} /> Закрыть кассу
+                    </button>
+                  )}
                   <div className="h-px bg-white/10 my-1" />
                   <button onClick={() => { setMenuOpen(false); navigate("/"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
                     <LayoutGrid size={16} /> Панель управления
@@ -749,9 +755,11 @@ export default function POS() {
       {/* ===== ЗАМЕТКА ===== */}
       {showNote && <NoteModal value={note} onSave={(v) => { setNote(v); setShowNote(false); }} onClose={() => setShowNote(false)} />}
 
-      {/* ===== СМЕНА: открытие (обязательно) ===== */}
+      {/* ===== КАССА: открывает админ, продавец подключается ===== */}
       {sessionLoaded && !session && (
-        <OpenSessionModal onOpened={(s) => setSession(s)} onCancel={() => navigate("/")} />
+        isAdmin
+          ? <OpenSessionModal onOpened={(s) => setSession(s)} onCancel={() => navigate("/")} />
+          : <KassaClosedScreen onConnected={(s) => setSession(s)} onExit={() => navigate("/")} />
       )}
 
       {/* ===== СМЕНА: закрытие ===== */}

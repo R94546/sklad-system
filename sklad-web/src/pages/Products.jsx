@@ -5,6 +5,9 @@ import AddToCartModal from "../components/AddToCartModal";
 import BarcodeScanner from "../components/BarcodeScanner";
 import toast from "react-hot-toast";
 import EmptyState from "../components/EmptyState";
+import ViewToggle from "../components/ViewToggle";
+import { getSavedView, saveView } from "../utils/viewPref";
+import useBarcodeScanner from "../hooks/useBarcodeScanner";
 import api from "../api/axios";
 import { Button, Input, Select, Modal, Badge } from "../components/ui";
 
@@ -105,7 +108,10 @@ export default function Products() {
   const [imagePreview, setImagePreview] = useState(null);
   const [generatingBarcode, setGeneratingBarcode] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(null);
+  const [view, setView] = useState(() => getSavedView("products", "grid"));
   const [form, setForm] = useState({ name: "", categoryId: "", buyPrice: "", sellPrice: "", quantity: "", minStock: 10, unit: "PIECE", barcode: "" });
+
+  const changeView = (v) => { setView(v); saveView("products", v); };
 
   const load = async () => {
     setLoading(true);
@@ -160,6 +166,12 @@ export default function Products() {
     setForm(f => ({ ...f, barcode }));
   };
 
+  // Сканер-пистолет: в форме товара — заполняет штрихкод, иначе — ищет товар
+  useBarcodeScanner((code) => {
+    if (modal) { setForm(f => ({ ...f, barcode: code })); toast.success("Штрихкод считан"); }
+    else { setSearch(""); handleScanForSearch(code); }
+  });
+
   const openCreate = () => {
     setEditing(null);
     setForm({ name: "", categoryId: "", buyPrice: "", sellPrice: "", quantity: "", minStock: 10, unit: "PIECE", barcode: "" });
@@ -204,7 +216,10 @@ export default function Products() {
     <div className="space-y-6 animate-fade-in">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Товары</h1>
-        <Button onClick={openCreate}><Plus size={16} /> Добавить</Button>
+        <div className="flex items-center gap-2">
+          <ViewToggle view={view} onChange={changeView} />
+          <Button onClick={openCreate}><Plus size={16} /> Добавить</Button>
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -235,7 +250,7 @@ export default function Products() {
         </div>
       ) : products.length === 0 ? (
         <EmptyState type="products" title="Товары не найдены" desc="Нажмите «Добавить» чтобы создать товар" />
-      ) : (
+      ) : view === "grid" ? (
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
           {products.map(p => {
             const low = Number(p.quantity) <= Number(p.minStock);
@@ -262,6 +277,50 @@ export default function Products() {
               </div>
             );
           })}
+        </div>
+      ) : (
+        <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-50 dark:bg-slate-700/50 border-b border-slate-100 dark:border-slate-700">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Товар</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Штрихкод</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider hidden md:table-cell">Категория</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Цена</th>
+                  <th className="px-4 py-3 text-right text-xs font-semibold text-slate-500 dark:text-slate-400 uppercase tracking-wider">В наличии</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50 dark:divide-slate-700">
+                {products.map(p => {
+                  const low = Number(p.quantity) <= Number(p.minStock);
+                  return (
+                    <tr key={p.id} onClick={() => setSelected(p)} className="hover:bg-slate-50 dark:hover:bg-slate-700/30 cursor-pointer">
+                      <td className="px-4 py-2.5">
+                        <div className="flex items-center gap-3">
+                          {p.imageUrl
+                            ? <img src={p.imageUrl} alt={p.name} className="w-9 h-9 rounded-lg object-cover flex-shrink-0" />
+                            : <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-700 flex items-center justify-center flex-shrink-0"><Package size={16} className="text-slate-400" /></div>}
+                          <span className="font-medium text-slate-800 dark:text-slate-200">{p.name}</span>
+                        </div>
+                      </td>
+                      <td className="px-4 py-2.5 font-mono text-xs text-slate-400 hidden md:table-cell">{p.barcode || "—"}</td>
+                      <td className="px-4 py-2.5 text-slate-500 dark:text-slate-400 hidden md:table-cell">{p.category?.name || "—"}</td>
+                      <td className="px-4 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400 tabular-nums">{Number(p.sellPrice).toLocaleString("ru-RU")} сом</td>
+                      <td className={"px-4 py-2.5 text-right tabular-nums font-medium " + (low ? "text-red-500" : "text-slate-600 dark:text-slate-300")}>{p.quantity} {UNITS[p.unit]}</td>
+                      <td className="px-4 py-2.5 text-right">
+                        <button onClick={(e) => { e.stopPropagation(); setCartProduct(p); }}
+                          className="p-1.5 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-500/10 rounded-lg" title="В чек">
+                          <ShoppingCart size={15} />
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
 

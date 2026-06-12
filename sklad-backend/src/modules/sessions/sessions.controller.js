@@ -11,7 +11,7 @@ const handle = (fn) => async (req, res) => {
   }
 };
 
-export const getCurrentHandler = handle((req) => service.getCurrent(req.user.id));
+export const getCurrentHandler = handle(() => service.getCurrent());
 
 export const openHandler = handle(async (req) => {
   const session = await service.open(req.user.id, req.body);
@@ -22,6 +22,15 @@ export const openHandler = handle(async (req) => {
 export const closeHandler = handle(async (req) => {
   const session = await service.close(req.params.id, req.body);
   await audit(req.user.id, "CLOSE_SESSION", "CashSession", session.id, null, session, req);
+  return session;
+});
+
+export const reopenHandler = handle(async (req) => {
+  const before = await service.getById(req.params.id);
+  const session = await service.reopen(req.params.id);
+  await audit(req.user.id, "SESSION_REOPEN", "CashSession", session.id,
+    { closingCash: before.closingCash, expectedCash: before.expectedCash, difference: before.difference },
+    null, req);
   return session;
 });
 

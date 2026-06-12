@@ -3,6 +3,9 @@ import { ClipboardCheck, Search } from "lucide-react";
 import api from "../api/axios";
 import toast from "react-hot-toast";
 import { Button } from "../components/ui";
+import ViewToggle from "../components/ViewToggle";
+import { getSavedView, saveView } from "../utils/viewPref";
+import useBarcodeScanner from "../hooks/useBarcodeScanner";
 
 const UNITS = { PIECE: "шт", KG: "кг", METER: "м", LITER: "л", BOX: "кор" };
 
@@ -12,6 +15,9 @@ export default function Inventory() {
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [view, setView] = useState(() => getSavedView("inventory", "list"));
+
+  const changeView = (v) => { setView(v); saveView("inventory", v); };
 
   const load = async () => {
     setLoading(true);
@@ -26,7 +32,16 @@ export default function Inventory() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
-  const filtered = products.filter((p) => p.name.toLowerCase().includes(search.toLowerCase()));
+  const filtered = products.filter((p) =>
+    p.name.toLowerCase().includes(search.toLowerCase()) || (p.barcode || "").includes(search.trim()));
+
+  // Сканер-пистолет: подставляет штрихкод в поиск — остаётся только ввести факт
+  useBarcodeScanner((code) => {
+    const found = products.find((p) => p.barcode === code);
+    setSearch(code);
+    if (found) toast.success(found.name);
+    else toast.error("Товар не найден: " + code);
+  });
 
   const diffOf = (p) => {
     const actual = parseFloat(String(counts[p.id] ?? "").replace(",", "."));
@@ -57,9 +72,12 @@ export default function Inventory() {
           <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Инвентаризация</h1>
           <p className="text-sm text-slate-400 mt-1">Сверка фактического остатка с учётным</p>
         </div>
-        <Button onClick={apply} loading={saving} disabled={changedCount === 0}>
-          <ClipboardCheck size={16} /> Применить{changedCount > 0 ? " (" + changedCount + ")" : ""}
-        </Button>
+        <div className="flex items-center gap-2">
+          <ViewToggle view={view} onChange={changeView} />
+          <Button onClick={apply} loading={saving} disabled={changedCount === 0}>
+            <ClipboardCheck size={16} /> Применить{changedCount > 0 ? " (" + changedCount + ")" : ""}
+          </Button>
+        </div>
       </div>
 
       <div className="relative max-w-md">
@@ -67,6 +85,34 @@ export default function Inventory() {
         <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Поиск товара..." className="w-full pl-9 pr-3 py-2 rounded-lg text-sm border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-indigo-500" />
       </div>
 
+      {view === "grid" && (
+        loading ? (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {Array.from({ length: 8 }).map((_, i) => <div key={i} className="h-28 bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 animate-pulse" />)}
+          </div>
+        ) : filtered.length === 0 ? (
+          <p className="text-center text-slate-400 py-12">Товары не найдены</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+            {filtered.map((p) => {
+              const d = diffOf(p);
+              return (
+                <div key={p.id} className="bg-white dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-2">
+                  <p className="font-semibold text-slate-800 dark:text-white text-sm leading-tight line-clamp-2">{p.name}</p>
+                  <p className="text-xs text-slate-400">Учётный: <span className="font-medium tabular-nums">{p.quantity} {UNITS[p.unit]}</span></p>
+                  <input type="number" step="any" value={counts[p.id] ?? ""} onChange={(e) => setCounts((c) => ({ ...c, [p.id]: e.target.value }))}
+                    className="w-full text-center rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white px-2 py-1.5 outline-none focus:ring-2 focus:ring-indigo-500 tabular-nums" />
+                  <p className={"text-sm text-center font-semibold tabular-nums " + (d === null ? "text-slate-300" : d === 0 ? "text-slate-400" : d > 0 ? "text-emerald-500" : "text-red-500")}>
+                    {d === null ? "—" : (d > 0 ? "+" : "") + d}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        )
+      )}
+
+      {view === "list" && (
       <div className="bg-white dark:bg-slate-800 rounded-xl border border-slate-100 dark:border-slate-700 overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -103,6 +149,7 @@ export default function Inventory() {
           </table>
         </div>
       </div>
+      )}
     </div>
   );
 }

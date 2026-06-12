@@ -1,23 +1,39 @@
 import prisma from "../../config/db.js";
 
-// Текущая открытая смена продавца
-export const getCurrent = async (sellerId) => {
+// Текущая открытая касса — ОДНА на магазин (открывает админ, продавцы подключаются)
+export const getCurrent = async () => {
   return prisma.cashSession.findFirst({
-    where: { sellerId, status: "OPEN" },
-    include: { movements: { orderBy: { createdAt: "desc" } } },
+    where: { status: "OPEN" },
+    include: {
+      movements: { orderBy: { createdAt: "desc" } },
+      seller: { select: { name: true } },
+    },
   });
 };
 
-// Открыть смену
-export const open = async (sellerId, data) => {
-  const existing = await prisma.cashSession.findFirst({ where: { sellerId, status: "OPEN" } });
-  if (existing) throw { status: 400, message: "Смена уже открыта" };
+// Открыть кассу (только админ)
+export const open = async (openedById, data) => {
+  const existing = await prisma.cashSession.findFirst({ where: { status: "OPEN" } });
+  if (existing) throw { status: 400, message: "Касса уже открыта" };
   return prisma.cashSession.create({
     data: {
-      sellerId,
+      sellerId: openedById,
       openingCash: Number(data.openingCash) || 0,
       openingNote: data.note || data.openingNote || null,
     },
+  });
+};
+
+// Переоткрыть закрытую кассу (только админ) — для исправления ошибок подсчёта
+export const reopen = async (id) => {
+  const session = await prisma.cashSession.findUnique({ where: { id } });
+  if (!session) throw { status: 404, message: "Касса не найдена" };
+  if (session.status === "OPEN") throw { status: 400, message: "Касса уже открыта" };
+  const other = await prisma.cashSession.findFirst({ where: { status: "OPEN" } });
+  if (other) throw { status: 400, message: "Сначала закройте текущую открытую кассу" };
+  return prisma.cashSession.update({
+    where: { id },
+    data: { status: "OPEN", closedAt: null, closingCash: null, expectedCash: null, difference: null },
   });
 };
 
