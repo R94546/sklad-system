@@ -10,7 +10,7 @@
 ### Backend (~85%)
 - Модули: auth, users, products, categories, clients, sales, debts, stockin, analytics, settings, barcode.
 - Логика корзины: addToCart / confirmCart / updateCartItem (`PATCH /sales/cart/item/:itemId` принимает quantity и price).
-- Касса-очередь (sendToKassa / kassaConfirm / kassaReturn), нcassия (долг), audit log с IP/User-Agent.
+- ~~Касса-очередь (sendToKassa / kassaConfirm / kassaReturn)~~ — **удалена 2026-06-12** (POS подтверждает оплату напрямую, PENDING → COMPLETED). Audit log с IP/User-Agent.
 
 ### POS — экран (БОСКИЧ 1)
 - `POS.jsx` — один экран: слева чек, справа сетка товаров.
@@ -140,6 +140,13 @@
 - **Дробные количества** (`Int→Decimal` миграция в prod): можно продавать/принимать 1.5 кг. `parseInt`→`Number` + обёртка `Number()` по всему коду; поля `step="any"`; POS-клавиатура без округления. Таймауты транзакций подняты (medленная БД Railway).
 
 **Проверено:** `eslint` ✓ (0 ошибок), `vite build` ✓ (263 кБ), множество live-тестов через API (продажа дробного кол-ва, перепродача-отказ, приход/правка/удаление, аналитика, аудит). 13 коммитов.
+
+### СЕССИЯ 2026-06-12 ✅
+- **Vercel deploy починен**: корневой `vercel.json` (build из `sklad-web/`), авто-деплой от push в main работает.
+- **🔴 POS-баг «90 → 9011111 → 95» при быстрых кликах** — Prisma Decimal сериализовался в JSON строкой, оптимистичное `"90" + 1` конкатенировало. Два слоя: `db.js` — `Prisma.Decimal.prototype.toJSON → toNumber()` (числа во всех API сразу); `cartStore.js` — `normCart` приводит quantity/price/totalAmount к числу при каждой сверке + `Number()` в инкременте. Проверено живым API (qty 1→2 number, дроби 0.5 точны).
+- **Merge ветки `dev` (коллаборатор akbarali207)**: удаление экрана «Касса» (−272 строки, 4 endpoint'а `/kassa/*`). Ревью перед merge: build/eslint/node--check чисто, висячих ссылок нет, в прод-БД 0 чеков SENT_TO_KASSA. Follow-up чистка: фильтр «На кассе» убран из OrdersView, роль «Кассир» убрана из формы Users, CLAUDE.md — новый lifecycle (PENDING → COMPLETED).
+- **🔴 Гонка дублей SaleItem закрыта**: `@@unique([saleId, productId])` (db push в prod, дубли предварительно проверены — 0) + атомарный `upsert` в `addToCart` вместо findFirst+create. Тест: два параллельных POST для нового товара → 1 строка qty 2 (раньше — 2 дубля).
+- Рабочий процесс с коллаборатором: он пушит в `dev` → Vercel даёт preview-URL (прод не трогается), Railway dev не деплоит; merge `dev → main` → авто-деплой обоих.
 
 ### Дальше — БОСКИЧ 7–8: mobile (Expo), desktop (Electron). Опционально: `Payment[]` (раздельный учёт нал+карта, сдача — нужна миграция), тесты (vitest), слой валидации (zod), timezone аналитики (нужен TZ магазина). SMS-чек — ждёт Android-шлюз. См. `tz,plan/SKLAD_TZ.md` раздел 11.
 

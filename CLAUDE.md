@@ -80,12 +80,12 @@ src/modules/<domain>/
 
 **Sale lifecycle** (SaleStatus enum):
 ```
-PENDING (cart) → SENT_TO_KASSA → COMPLETED
-                              → CANCELLED / RETURNED
+PENDING (cart) → COMPLETED (POS: POST /api/sales/cart/:id/confirm)
+              → CANCELLED / RETURNED
 ```
-Each seller has at most one `PENDING` sale (their cart). Cart operations go through `POST /api/sales/cart/*`. Confirming a cart decrements product stock.
+`SENT_TO_KASSA` remains in the enum but is unreachable — the «Касса» screen was removed (2026-06-12), POS confirms payment directly. A seller can hold multiple parallel `PENDING` sales (cart tabs in POS). Cart operations go through `POST /api/sales/cart/*`. Confirming a cart decrements product stock atomically.
 
-**Roles:** `ADMIN` and `SELLER` (schema also defines `KASSIR`). Admin-only routes: analytics, users, categories, stock-in, settings, audit log. In `App.jsx` these use `<AdminRoute>`.
+**Roles:** `ADMIN` and `SELLER` (schema also defines `KASSIR`, unused since the Касса removal). Admin-only routes: analytics, users, categories, stock-in, settings, audit log. In `App.jsx` these use `<AdminRoute>`.
 
 **Debt reminders:** `src/jobs/debtReminder.job.js` runs via `node-cron` daily at 20:00. Sends SMS through Eskiz API for debts due tomorrow and marks overdue debts.
 

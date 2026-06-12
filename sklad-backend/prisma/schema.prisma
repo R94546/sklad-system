@@ -126,6 +126,9 @@ model SaleItem {
   product   Product  @relation(fields: [productId], references: [id])
   quantity  Decimal
   price     Decimal
+
+  // Одна строка на товар в чеке: быстрые параллельные клики не создают дублей
+  @@unique([saleId, productId])
 }
 
 model Debt {

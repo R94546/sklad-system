@@ -17,7 +17,6 @@ const FILTERS = [
   { value: "ALL", label: "Все" },
   { value: "COMPLETED", label: "Оплачено" },
   { value: "PENDING", label: "Корзина" },
-  { value: "SENT_TO_KASSA", label: "На кассе" },
   { value: "CANCELLED", label: "Отменён" },
   { value: "RETURNED", label: "Возврат" },
 ];

@@ -175,14 +175,15 @@ export const addToCart = async (userId, productId, quantity, price, saleId) => {
     });
   }
 
-  const existing = await prisma.saleItem.findFirst({ where: { saleId: cart.id, productId } });
-  
-  if (existing) {
-    await prisma.saleItem.update({ where: { id: existing.id }, data: { quantity: { increment: quantity } } });
-  } else {
-    await prisma.saleItem.create({ data: { saleId: cart.id, productId, quantity, price: price || product.sellPrice } });
-  }
-  
+  // Атомарный upsert по @@unique(saleId, productId): параллельные клики
+  // инкрементируют одну строку, а не создают дубли (раньше findFirst+create гонялись)
+  await prisma.saleItem.upsert({
+    where: { saleId_productId: { saleId: cart.id, productId } },
+    update: { quantity: { increment: quantity } },
+    create: { saleId: cart.id, productId, quantity, price: price || product.sellPrice },
+  });
+
+
   const items = await prisma.saleItem.findMany({ where: { saleId: cart.id } });
   const total = items.reduce((s, i) => s + Number(i.price) * Number(i.quantity), 0);
   

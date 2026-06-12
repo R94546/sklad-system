@@ -4,7 +4,7 @@ import api from "../api/axios";
 import toast from "react-hot-toast";
 import { Button, Input, Select, Modal, Badge } from "../components/ui";
 
-const ROLE_OPTIONS = [{ value: "SELLER", label: "Продавец" }, { value: "KASSIR", label: "Кассир" }, { value: "ADMIN", label: "Администратор" }];
+const ROLE_OPTIONS = [{ value: "SELLER", label: "Продавец" }, { value: "ADMIN", label: "Администратор" }];
 const STATUS = { COMPLETED: { label: "Завершён", variant: "green" }, CANCELLED: { label: "Отменён", variant: "red" }, RETURNED: { label: "Возврат", variant: "yellow" } };
 const PAYMENT_LABELS = { CASH: "Наличные", CARD: "Карта", DEBT: "Долг", MIXED: "Смешанная" };
 
