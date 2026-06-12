@@ -14,7 +14,7 @@ export const getDashboard = async () => {
   const [
     todaySales, monthSales, yesterdaySales, prevMonthSales,
     totalDebtAgg, overdueDebts, activeProducts, totalClients,
-    monthCompleted, periodItems, openSessions,
+    monthCompleted, periodItems, openSessions, monthDebtPayments,
   ] = await Promise.all([
     prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: today, lt: tomorrow } }, _sum: { totalAmount: true }, _count: true }),
     prisma.sale.aggregate({ where: { status: 'COMPLETED', createdAt: { gte: monthStart } }, _sum: { totalAmount: true }, _count: true }),
@@ -30,6 +30,8 @@ export const getDashboard = async () => {
     // Позиции завершённых продаж за месяц — для прибыли (факт. цена − закупка)
     prisma.saleItem.findMany({ where: { sale: { status: 'COMPLETED', createdAt: { gte: monthStart } } }, select: { quantity: true, price: true, sale: { select: { createdAt: true } }, product: { select: { buyPrice: true } } } }),
     prisma.cashSession.count({ where: { status: 'OPEN' } }),
+    // Погашения долгов за месяц по способу оплаты (фактически полученные деньги)
+    prisma.debtPayment.groupBy({ by: ['method'], where: { createdAt: { gte: monthStart } }, _sum: { amount: true } }),
   ]);
 
   const lowStockCount = activeProducts.filter((p) => Number(p.quantity) <= Number(p.minStock)).length;
@@ -41,6 +43,13 @@ export const getDashboard = async () => {
   const payments = { CASH: 0, CARD: 0, DEBT: 0, MIXED: 0 };
   for (const s of monthCompleted) {
     if (payments[s.paymentType] !== undefined) payments[s.paymentType] += Number(s.totalAmount);
+  }
+
+  const debtPaid = { CASH: 0, CARD: 0, total: 0 };
+  for (const p of monthDebtPayments) {
+    const sum = Number(p._sum.amount || 0);
+    if (debtPaid[p.method] !== undefined) debtPaid[p.method] += sum;
+    debtPaid.total += sum;
   }
 
   let todayProfit = 0, monthProfit = 0;
@@ -60,6 +69,7 @@ export const getDashboard = async () => {
     totalClients,
     stockValue,
     payments,
+    debtPaid,
     openSessions,
   };
 };

@@ -90,13 +90,8 @@ export default function Dashboard() {
     setModalLoading(false);
   };
 
-  const formatNum = (n) => {
-    const num = Number(n);
-    if (num >= 1000000000) return (num/1000000000).toFixed(1) + " млрд";
-    if (num >= 1000000) return (num/1000000).toFixed(1) + " млн";
-    if (num >= 1000) return (num/1000).toFixed(0) + " тыс";
-    return num.toLocaleString("ru-RU");
-  };
+  // Полные суммы с разделителем тысяч: 160 000 000, без сокращений «млн/млрд»
+  const formatNum = (n) => Math.round(Number(n) || 0).toLocaleString("ru-RU");
 
   const avgCheck = (amt, cnt) => cnt > 0 ? formatNum(amt / cnt) : "0";
   const pct = (cur, prev) => prev > 0 ? ((cur - prev) / prev) * 100 : null;
@@ -185,6 +180,13 @@ export default function Dashboard() {
                       </div>
                     ))}
                   </div>
+                  {(data.debtPaid?.total || 0) > 0 && (
+                    <p className="text-xs text-slate-500 dark:text-slate-400 pt-2 border-t border-slate-100 dark:border-slate-700">
+                      Погашение долгов: <span className="font-semibold text-emerald-600">{formatNum(data.debtPaid.CASH)} нал.</span>
+                      {" · "}<span className="font-semibold text-blue-600">{formatNum(data.debtPaid.CARD)} карта</span>
+                      {" · всего "}<span className="font-semibold text-slate-700 dark:text-slate-300">{formatNum(data.debtPaid.total)} сом</span>
+                    </p>
+                  )}
                 </div>
               );
             })()}

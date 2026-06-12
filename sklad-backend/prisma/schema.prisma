@@ -22,6 +22,7 @@ model User {
   refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
   cashSessions  CashSession[]
+  debtPayments  DebtPayment[]
 }
 
 enum Role {
@@ -142,6 +143,24 @@ model Debt {
   dueDate   DateTime
   status    DebtStatus @default(PENDING)
   createdAt DateTime   @default(now())
+  payments  DebtPayment[]
+}
+
+// Погашение долга: каждый платёж отдельно, со способом оплаты (для аналитики)
+model DebtPayment {
+  id        String    @id @default(uuid())
+  debtId    String
+  debt      Debt      @relation(fields: [debtId], references: [id])
+  amount    Decimal
+  method    PayMethod @default(CASH)
+  userId    String?
+  user      User?     @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+}
+
+enum PayMethod {
+  CASH
+  CARD
 }
 
 enum DebtStatus {

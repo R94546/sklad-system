@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { DollarSign, X } from "lucide-react";
+import { DollarSign, X, Banknote, CreditCard } from "lucide-react";
 import EmptyState from "../components/EmptyState";
 import api from "../api/axios";
 import toast from "react-hot-toast";
@@ -69,6 +69,7 @@ export default function Debts() {
   const [selected, setSelected] = useState(null);
   const [detailModal, setDetailModal] = useState(null);
   const [amount, setAmount] = useState("");
+  const [method, setMethod] = useState("CASH");
   const [paying, setPaying] = useState(false);
 
   const load = async () => {
@@ -81,13 +82,13 @@ export default function Debts() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
-  const openPay = (d) => { setSelected(d); setAmount(""); setDetailModal(null); setPayModal(true); };
+  const openPay = (d) => { setSelected(d); setAmount(""); setMethod("CASH"); setDetailModal(null); setPayModal(true); };
 
   const handlePay = async (e) => {
     e.preventDefault();
     setPaying(true);
     try {
-      await api.patch("/debts/" + selected.id + "/pay", { amount: Number(amount) });
+      await api.patch("/debts/" + selected.id + "/pay", { amount: Number(amount), method });
       toast.success("Оплата принята");
       setPayModal(false);
       load();
@@ -166,6 +167,17 @@ export default function Debts() {
               </div>
             </div>
             <form onSubmit={handlePay} className="space-y-4">
+              <div className="grid grid-cols-2 gap-2">
+                {[{ k: "CASH", label: "Наличные", icon: Banknote }, { k: "CARD", label: "Карта", icon: CreditCard }].map(m => (
+                  <button key={m.k} type="button" onClick={() => setMethod(m.k)}
+                    className={"flex items-center justify-center gap-2 rounded-lg border px-3 py-2.5 text-sm font-medium transition " +
+                      (method === m.k
+                        ? "border-indigo-500 bg-indigo-50 text-indigo-700 dark:bg-indigo-500/15 dark:text-indigo-300"
+                        : "border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:border-slate-300")}>
+                    <m.icon size={16} /> {m.label}
+                  </button>
+                ))}
+              </div>
               <Input label="Сумма оплаты" type="number" value={amount} onChange={e => setAmount(e.target.value)} placeholder="Введите сумму" required />
               <div className="flex gap-3">
                 <Button type="button" variant="outline" className="flex-1" onClick={() => setPayModal(false)}>Отмена</Button>

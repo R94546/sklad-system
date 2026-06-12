@@ -19,8 +19,8 @@ export const getById = async (req, res, next) => {
 
 export const pay = async (req, res, next) => {
   try {
-    const data = await debtsService.pay(req.params.id, req.body.amount);
-    await audit(req.user.id, 'DEBT_PAY', 'Debt', req.params.id, null, { amount: req.body.amount }, req);
+    const data = await debtsService.pay(req.params.id, req.body.amount, req.body.method, req.user.id);
+    await audit(req.user.id, 'DEBT_PAY', 'Debt', req.params.id, null, { amount: req.body.amount, method: req.body.method === 'CARD' ? 'CARD' : 'CASH' }, req);
     return success(res, data, 'Оплата принята');
   } catch (err) { next(err); }
 };
