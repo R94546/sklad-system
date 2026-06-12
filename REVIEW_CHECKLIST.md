@@ -15,8 +15,8 @@
 - [x] **Инвентаризация** — страница `/inventory` (admin, пункт меню): учётный vs факт. остаток, разница, «Применить» → `POST /products/inventory` (коррекция в транзакции + аудит `INVENTORY_ADJUST`). ✅ вживую: 14892→14899.
 
 ### ⚙️ Деплой (Vercel/Railway)
-- [ ] **Vercel build падал: `vite build` exited 127** (vite не найден). Вероятная причина: Root Directory в дашборде Vercel = `sklad-web` → читается `sklad-web/vercel.json` (там только rewrites), а `vite` (в devDependencies) не ставится при `NODE_ENV=production`. Фикс: в `sklad-web/vercel.json` задать `installCommand: npm install --include=dev` + `buildCommand: npm run build`, либо убрать `framework:"vite"` из корневого `vercel.json` и держать Root Directory = корень репо. Проверить env Vercel на `NODE_ENV`.
-- [ ] **Railway (backend) передеплоить** под Decimal-схему БД (миграция уже применена в prod 2026-06-11). Иначе старый Int-клиент рассинхронен с БД.
+- [x] **Vercel build** — починился сам собой ещё до этой сессии (ошибки exit 127 были 17h+ назад). После `git push` (619f012) Vercel автодеплоит с GitHub: `npm install --prefix sklad-web` + `vite build` ✓ 2.38s, прод-алиас https://sklad-web-app.vercel.app отдаёт свежий бандл (Inventory-чанк на месте). ✅ вживую 2026-06-12.
+- [x] **Railway (backend)** — автодеплоит с GitHub: после push'а прод уже отвечает кодом 619f012 (`POST /api/products/inventory` существует, «Инвентаризация применена»). Decimal-клиент сверен с БД: `GET /api/products` отдаёт корректные цены (12000/15000), без 500. ✅ вживую 2026-06-12. Прод-API: https://sklad-system-production.up.railway.app/api.
 
 ---
 
