@@ -40,7 +40,8 @@ const StatCard = ({ icon: Icon, label, value, sub, trend, color, bg, delay = "",
       <div className={"p-3 rounded-xl " + bg}><Icon size={22} className={color} /></div>
       <div className="flex-1 min-w-0">
         <p className="text-xs text-slate-400 dark:text-slate-500 font-medium uppercase tracking-wide">{label}</p>
-        <p className="text-lg font-bold text-slate-800 dark:text-white mt-0.5">{value}</p>
+        {/* На телефоне карточки в 1 колонку, суммы полностью; перенос — страховка */}
+        <p className="text-base sm:text-lg font-bold text-slate-800 dark:text-white mt-0.5 leading-tight break-words">{value}</p>
         {(sub || trend != null) && (
           <div className="flex items-center gap-2 mt-0.5">
             {trend != null && <Trend value={trend} />}
@@ -108,7 +109,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI — продажи и прибыль */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={ShoppingCart} label="Продажи сегодня" value={formatNum(data.today.amount) + " сом"}
           sub={data.today.count + " чек · ср. " + avgCheck(data.today.amount, data.today.count)}
           trend={pct(data.today.amount, data.prev?.today)}
@@ -125,7 +126,7 @@ export default function Dashboard() {
       </div>
 
       {/* KPI — склад, долги, клиенты */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
         <StatCard icon={Boxes} label="Стоимость склада" value={formatNum(data.stockValue) + " сом"}
           bg="bg-amber-50 dark:bg-amber-500/10" color="text-amber-600" delay="delay-300" show={isAdmin} />
         <StatCard icon={CreditCard} label="Общий долг" value={formatNum(data.totalDebt) + " сом"}

@@ -57,7 +57,7 @@ export default function Sessions() {
     <div className="space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-2">
         <h1 className="text-2xl font-bold text-slate-800 dark:text-slate-200">Смены (кассы)</h1>
-        <div className="flex gap-1.5 items-center">
+        <div className="flex gap-1.5 items-center flex-wrap">
           {[["ALL", "Все"], ["OPEN", "Открытые"], ["CLOSED", "Закрытые"]].map(([v, l]) => (
             <button key={v} onClick={() => setFilter(v)} className={"px-3 py-1.5 text-sm rounded-lg font-medium transition " + (filter === v ? "bg-indigo-600 text-white" : "bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700")}>{l}</button>
           ))}
@@ -74,6 +74,7 @@ export default function Sessions() {
         ) : sessions.length === 0 ? (
           <p className="text-center text-slate-400 py-12">Смен не найдено</p>
         ) : (
+          <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-700">
@@ -120,6 +121,7 @@ export default function Sessions() {
               ))}
             </tbody>
           </table>
+          </div>
         )}
       </div>
 

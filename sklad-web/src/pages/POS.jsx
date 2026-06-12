@@ -4,7 +4,7 @@ import {
   Search, Trash2, Package, X, ScanLine, User, Plus, Menu, Delete,
   FileText, Upload, MoreVertical, RefreshCw, Moon, Sun,
   Boxes, Wrench, Hammer, ShoppingBag, Tag, LayoutGrid, Sofa, Check,
-  Banknote, CreditCard, Wallet, ArrowLeft, Printer, Send, LogOut,
+  Banknote, CreditCard, Wallet, ArrowLeft, Printer, Send, LogOut, ShoppingCart,
 } from "lucide-react";
 import printJS from "print-js";
 import api from "../api/axios";
@@ -71,6 +71,9 @@ export default function POS() {
 
   // Чек после оплаты (экран подтверждения)
   const [lastSale, setLastSale] = useState(null);
+
+  // Мобильный режим: чек-панель поверх каталога
+  const [showCheque, setShowCheque] = useState(false);
 
   // Смена (касса)
   const [session, setSession] = useState(null);
@@ -389,6 +392,7 @@ export default function POS() {
   // Новая продажа после подтверждения
   const continueSale = () => {
     setView("register");
+    setShowCheque(false);
     setLastSale(null);
     setSelectedClient(null);
     setNote("");
@@ -486,8 +490,16 @@ export default function POS() {
       {/* ===== РЕЖИМ: РЕГИСТРАЦИЯ ===== */}
       {view === "register" && (
         <div className="flex-1 flex min-h-0">
-          {/* ЛЕВАЯ ПАНЕЛЬ: ЧЕК + КЛАВИАТУРА */}
-          <div className="w-[38%] min-w-[360px] max-w-[460px] flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+          {/* ЛЕВАЯ ПАНЕЛЬ: ЧЕК + КЛАВИАТУРА.
+              На телефоне скрыта — открывается поверх каталога кнопкой «Чек» */}
+          <div className={(showCheque ? "flex fixed inset-0 z-40 w-full " : "hidden ") +
+            "lg:flex lg:static lg:z-auto lg:w-[38%] lg:min-w-[360px] lg:max-w-[460px] flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700"}>
+            <div className="lg:hidden flex items-center justify-between px-3 py-2.5 border-b border-slate-200 dark:border-slate-700 shrink-0">
+              <button onClick={() => setShowCheque(false)} className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300">
+                <ArrowLeft size={18} /> Товары
+              </button>
+              <span className="text-sm font-bold text-slate-800 dark:text-white">Чек{items.length ? " · " + items.length + " поз." : ""}</span>
+            </div>
             <div className="flex-1 overflow-y-auto min-h-0">
               {items.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-600 select-none">
@@ -617,6 +629,13 @@ export default function POS() {
                 </div>
               )}
             </div>
+
+            {/* Мобильная кнопка «Чек»: открывает чек-панель поверх каталога */}
+            <button onClick={() => setShowCheque(true)}
+              className="lg:hidden shrink-0 mx-3 mb-3 flex items-center justify-between px-4 py-3.5 rounded-xl bg-[#714B67] hover:bg-[#5d3d54] text-white font-bold shadow-lg transition">
+              <span className="flex items-center gap-2"><ShoppingCart size={18} /> Чек{items.length ? " · " + items.length + " поз." : ""}</span>
+              <span className="tabular-nums">{fmt(total)} сом</span>
+            </button>
           </div>
         </div>
       )}
@@ -626,9 +645,9 @@ export default function POS() {
 
       {/* ===== РЕЖИМ: ОПЛАТА ===== */}
       {view === "payment" && (
-        <div className="flex-1 flex min-h-0">
-          {/* ЛЕВО: способы + клавиатура */}
-          <div className="w-[38%] min-w-[360px] max-w-[460px] flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
+        <div className="flex-1 flex flex-col-reverse lg:flex-row min-h-0 overflow-y-auto lg:overflow-visible">
+          {/* ЛЕВО: способы + клавиатура (на телефоне — снизу, под суммой) */}
+          <div className="w-full shrink-0 lg:shrink lg:w-[38%] lg:min-w-[360px] lg:max-w-[460px] flex flex-col bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700">
             <div className="p-3 space-y-2 overflow-y-auto">
               {PAY_METHODS.map((m) => (
                 <button key={m.value} onClick={() => addPayment(m.value)} className="w-full flex items-center gap-3 px-4 py-3.5 rounded-xl border border-slate-200 dark:border-slate-600 bg-slate-50 dark:bg-slate-700/40 hover:border-teal-400 hover:bg-teal-50 dark:hover:bg-teal-500/10 text-slate-700 dark:text-slate-200 font-medium transition">
@@ -674,17 +693,17 @@ export default function POS() {
             </div>
           </div>
 
-          {/* ПРАВО: сумма + список платежей */}
-          <div className="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-900 p-6">
-            <div className="text-center py-6">
+          {/* ПРАВО: сумма + список платежей (на телефоне — сверху) */}
+          <div className="flex-1 flex flex-col min-w-0 bg-slate-100 dark:bg-slate-900 p-4 lg:p-6">
+            <div className="text-center py-3 lg:py-6">
               <p className="text-sm text-slate-400 uppercase tracking-wide">К оплате</p>
-              <p className="text-5xl md:text-6xl font-extrabold text-slate-900 dark:text-white tabular-nums mt-1">{fmt(total)} <span className="text-3xl text-slate-400">сом</span></p>
+              <p className="text-4xl md:text-6xl font-extrabold text-slate-900 dark:text-white tabular-nums mt-1 break-words">{fmt(total)} <span className="text-2xl md:text-3xl text-slate-400">сом</span></p>
             </div>
 
-            <div className="flex-1 overflow-y-auto space-y-2 max-w-2xl w-full mx-auto">
+            <div className="flex-1 overflow-y-auto space-y-2 max-w-2xl w-full mx-auto min-h-[90px]">
               {payments.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-full text-slate-300 dark:text-slate-600">
-                  <Wallet size={40} className="mb-2" /><p className="text-sm">Выберите способ оплаты слева</p>
+                  <Wallet size={40} className="mb-2" /><p className="text-sm">Выберите способ оплаты</p>
                 </div>
               ) : payments.map((p) => {
                 const meta = PAY_METHODS.find((m) => m.value === p.method);
