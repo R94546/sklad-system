@@ -6,6 +6,20 @@
 
 ---
 
+## 🆕 Новые задачи (от пользователя, 2026-06-12) — НАЧАТЬ ОТСЮДА
+
+- [ ] **POS оплата: ввод суммы с физической клавиатуры.** Сейчас сумму оплаты можно вводить только экранной клавиатурой. Добавить обработчик `keydown` в режиме оплаты POS (`POS.jsx`, `view==="payment"`): цифры 0-9, запятая/точка, Backspace (⌫), Enter (подтвердить/добавить платёж). Не перехватывать ввод, если фокус в `<input>`/`<textarea>`.
+- [ ] **Логирование действий пользователей (admin + продавцы).** Расширить покрытие `audit()`: клиенты (create/update/block), товары (create/update/delete), категории (create/update/delete), пользователи (create/update/block), погашение долга, смена (open/close/movement). Сейчас логируются только LOGIN, SALE_CONFIRM/CANCEL/RETURN/DELETE, STOCK_IN/EDIT/DELETE. Цель — «последние действия» каждого пользователя видны в Журнале (`/audit`).
+- [ ] **Дашборд продавца: карточка «Клиенты» кликабельна.** В роли продавца клик по карточке «Клиенты» должен вести на `/clients` (сейчас `onClick` только для админа → `openModal`). В `Dashboard.jsx`: для не-админа `onClick={() => navigate("/clients")}`.
+- [ ] **Товары: удаление прикреплённого фото при редактировании.** В форме редактирования товара (`Products.jsx`) добавить кнопку «Удалить фото» (сброс превью + `imageUrl: null`). Бэкенд `products.update` должен принять `imageUrl: null` для очистки (опционально удалить файл через `deleteImage`).
+- [ ] **Инвентаризация (сверка склада).** Новый раздел (admin): ввод фактического остатка по товарам → сравнение с учётным `quantity` → показ расхождений → корректировка остатка (в транзакции, аудит `INVENTORY_ADJUST`). Нужна модель `Inventory`/`InventoryItem` (миграция Decimal-quantity) или корректирующий StockIn. Пункт меню + страница. Эталон — Odoo «Инвентаризация».
+
+### ⚙️ Деплой (Vercel/Railway)
+- [ ] **Vercel build падал: `vite build` exited 127** (vite не найден). Вероятная причина: Root Directory в дашборде Vercel = `sklad-web` → читается `sklad-web/vercel.json` (там только rewrites), а `vite` (в devDependencies) не ставится при `NODE_ENV=production`. Фикс: в `sklad-web/vercel.json` задать `installCommand: npm install --include=dev` + `buildCommand: npm run build`, либо убрать `framework:"vite"` из корневого `vercel.json` и держать Root Directory = корень репо. Проверить env Vercel на `NODE_ENV`.
+- [ ] **Railway (backend) передеплоить** под Decimal-схему БД (миграция уже применена в prod 2026-06-11). Иначе старый Int-клиент рассинхронен с БД.
+
+---
+
 ## ✅ Исправлено
 
 - [x] **Частый разлогин** (2026-06-11) — `JWT_EXPIRES_IN` 2мин→1д + single-flight refresh (axios): при пачке параллельных 401 токен обновляется один раз, а не каждым запросом (ротация refresh-токена больше не ломается гонкой).
