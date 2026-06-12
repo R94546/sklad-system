@@ -23,9 +23,10 @@ npm run start      # production: prisma generate + node
 After adding/changing Prisma models:
 ```bash
 cd sklad-backend
-npx prisma migrate dev --name <migration-name>
+npx prisma db push      # NOT `migrate dev`!
 npx prisma generate
 ```
+⚠️ **Never run `prisma migrate dev` here** — `DATABASE_URL` points at the **shared production DB** (Railway), the migration history is out of sync with the actual schema (changes were applied via `db push`), so `migrate dev` proposes a full database **reset** (data loss). Use `db push`; it aborts on destructive changes unless `--accept-data-loss` is passed.
 
 ### Frontend
 
