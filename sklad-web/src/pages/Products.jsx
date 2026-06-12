@@ -175,7 +175,8 @@ export default function Products() {
     e.preventDefault();
     setSaving(true);
     try {
-      let imageUrl = editing?.imageUrl || null;
+      // imagePreview === null означает, что фото удалили в форме
+      let imageUrl = imagePreview ? (editing?.imageUrl || null) : null;
       if (imageFile) {
         const formData = new FormData();
         formData.append("image", imageFile);
@@ -313,7 +314,14 @@ export default function Products() {
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Фото</label>
             <input type="file" accept="image/*" onChange={handleImageChange} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
-            {imagePreview && <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg mt-1" />}
+            {imagePreview && (
+              <div className="relative mt-1">
+                <img src={imagePreview} alt="preview" className="w-full h-40 object-cover rounded-lg" />
+                <button type="button" onClick={() => { setImageFile(null); setImagePreview(null); }} className="absolute top-2 right-2 bg-black/60 hover:bg-red-600 text-white rounded-full p-1.5" title="Удалить фото">
+                  <Trash2 size={15} />
+                </button>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setModal(false)}>Отмена</Button>

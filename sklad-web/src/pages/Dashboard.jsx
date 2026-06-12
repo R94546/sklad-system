@@ -142,7 +142,7 @@ export default function Dashboard() {
           onClick={isAdmin ? () => openModal("debts") : undefined} show={isAdmin} />
         <StatCard icon={Users} label="Клиенты" value={data.totalClients}
           bg="bg-violet-50 dark:bg-violet-500/10" color="text-violet-600" delay="delay-400"
-          onClick={isAdmin ? () => openModal("clients") : undefined} />
+          onClick={isAdmin ? () => openModal("clients") : () => navigate("/clients")} />
       </div>
 
       {/* Касса + способы оплаты */}

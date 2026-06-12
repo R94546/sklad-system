@@ -335,6 +335,26 @@ export default function POS() {
     } else toast.error("Ошибка оформления");
   };
 
+  // Физическая клавиатура в режиме оплаты: цифры / запятая / ⌫ / Enter / Esc
+  const payKeyRef = useRef(null);
+  useEffect(() => {
+    payKeyRef.current = (e) => {
+      if (view !== "payment") return;
+      const tag = e.target?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || e.target?.isContentEditable) return;
+      if (/^[0-9]$/.test(e.key)) { e.preventDefault(); pressPay(e.key); }
+      else if (e.key === "," || e.key === ".") { e.preventDefault(); pressPay(","); }
+      else if (e.key === "Backspace") { e.preventDefault(); pressPay("back"); }
+      else if (e.key === "Enter") { e.preventDefault(); if (remaining <= 0 && !saving) handleConfirm(); }
+      else if (e.key === "Escape") { e.preventDefault(); setView("cart"); }
+    };
+  });
+  useEffect(() => {
+    const h = (e) => payKeyRef.current && payKeyRef.current(e);
+    window.addEventListener("keydown", h);
+    return () => window.removeEventListener("keydown", h);
+  }, []);
+
   // Печать чека (print-js)
   const printReceipt = () => {
     const s = lastSale;
