@@ -15,6 +15,7 @@ const Analytics = lazy(() => import('./pages/Analytics'));
 const Users = lazy(() => import('./pages/Users'));
 const Categories = lazy(() => import('./pages/Categories'));
 const StockIn = lazy(() => import('./pages/StockIn'));
+const Inventory = lazy(() => import('./pages/Inventory'));
 const Settings = lazy(() => import('./pages/Settings'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const POS = lazy(() => import('./pages/POS'));
@@ -53,6 +54,7 @@ export default function App() {
           <Route path="/users" element={<AdminRoute><Users /></AdminRoute>} />
           <Route path="/categories" element={<AdminRoute><Categories /></AdminRoute>} />
           <Route path="/stockin" element={<AdminRoute><StockIn /></AdminRoute>} />
+          <Route path="/inventory" element={<AdminRoute><Inventory /></AdminRoute>} />
           <Route path="/settings" element={<AdminRoute><Settings /></AdminRoute>} />
           <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
           <Route path="/sessions" element={<AdminRoute><Sessions /></AdminRoute>} />

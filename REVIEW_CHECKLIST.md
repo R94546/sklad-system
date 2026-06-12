@@ -8,11 +8,11 @@
 
 ## 🆕 Новые задачи (от пользователя, 2026-06-12) — НАЧАТЬ ОТСЮДА
 
-- [ ] **POS оплата: ввод суммы с физической клавиатуры.** Сейчас сумму оплаты можно вводить только экранной клавиатурой. Добавить обработчик `keydown` в режиме оплаты POS (`POS.jsx`, `view==="payment"`): цифры 0-9, запятая/точка, Backspace (⌫), Enter (подтвердить/добавить платёж). Не перехватывать ввод, если фокус в `<input>`/`<textarea>`.
-- [ ] **Логирование действий пользователей (admin + продавцы).** Расширить покрытие `audit()`: клиенты (create/update/block), товары (create/update/delete), категории (create/update/delete), пользователи (create/update/block), погашение долга, смена (open/close/movement). Сейчас логируются только LOGIN, SALE_CONFIRM/CANCEL/RETURN/DELETE, STOCK_IN/EDIT/DELETE. Цель — «последние действия» каждого пользователя видны в Журнале (`/audit`).
-- [ ] **Дашборд продавца: карточка «Клиенты» кликабельна.** В роли продавца клик по карточке «Клиенты» должен вести на `/clients` (сейчас `onClick` только для админа → `openModal`). В `Dashboard.jsx`: для не-админа `onClick={() => navigate("/clients")}`.
-- [ ] **Товары: удаление прикреплённого фото при редактировании.** В форме редактирования товара (`Products.jsx`) добавить кнопку «Удалить фото» (сброс превью + `imageUrl: null`). Бэкенд `products.update` должен принять `imageUrl: null` для очистки (опционально удалить файл через `deleteImage`).
-- [ ] **Инвентаризация (сверка склада).** Новый раздел (admin): ввод фактического остатка по товарам → сравнение с учётным `quantity` → показ расхождений → корректировка остатка (в транзакции, аудит `INVENTORY_ADJUST`). Нужна модель `Inventory`/`InventoryItem` (миграция Decimal-quantity) или корректирующий StockIn. Пункт меню + страница. Эталон — Odoo «Инвентаризация».
+- [x] **POS оплата: ввод суммы с физической клавиатуры.** Добавлен `keydown`-слушатель в режиме оплаты (`POS.jsx`): 0-9, запятая/точка, Backspace, Enter=подтвердить, Esc=назад; не перехватывает ввод в полях. ✅
+- [x] **Логирование действий пользователей.** `audit()` добавлен: PRODUCT_*, CLIENT_*, USER_*, CATEGORY_*, DEBT_PAY, INVENTORY_ADJUST (+ ранее SALE_*/STOCK_*/LOGIN). Видно в Журнале. ✅ вживую.
+- [x] **Дашборд продавца: карточка «Клиенты» кликабельна** → для не-админа `navigate("/clients")`. ✅
+- [x] **Товары: удаление фото при редактировании** — кнопка на превью (сброс + `imageUrl:null`, бэкенд принимает null). ✅
+- [x] **Инвентаризация** — страница `/inventory` (admin, пункт меню): учётный vs факт. остаток, разница, «Применить» → `POST /products/inventory` (коррекция в транзакции + аудит `INVENTORY_ADJUST`). ✅ вживую: 14892→14899.
 
 ### ⚙️ Деплой (Vercel/Railway)
 - [ ] **Vercel build падал: `vite build` exited 127** (vite не найден). Вероятная причина: Root Directory в дашборде Vercel = `sklad-web` → читается `sklad-web/vercel.json` (там только rewrites), а `vite` (в devDependencies) не ставится при `NODE_ENV=production`. Фикс: в `sklad-web/vercel.json` задать `installCommand: npm install --include=dev` + `buildCommand: npm run build`, либо убрать `framework:"vite"` из корневого `vercel.json` и держать Root Directory = корень репо. Проверить env Vercel на `NODE_ENV`.

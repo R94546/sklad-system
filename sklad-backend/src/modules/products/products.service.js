@@ -73,6 +73,25 @@ export const remove = async (id) => {
   return prisma.product.update({ where: { id }, data: { isActive: false } });
 };
 
+// Инвентаризация: выставить фактический остаток по списку товаров (в транзакции).
+// Возвращает только позиции с расхождением.
+export const inventory = async (items) => {
+  const adjustments = [];
+  await prisma.$transaction(async (tx) => {
+    for (const it of items || []) {
+      const actual = Number(it.actualQty);
+      if (!it.productId || !Number.isFinite(actual) || actual < 0) continue;
+      const product = await tx.product.findUnique({ where: { id: it.productId } });
+      if (!product) continue;
+      const oldQty = Number(product.quantity);
+      if (oldQty === actual) continue;
+      await tx.product.update({ where: { id: it.productId }, data: { quantity: actual } });
+      adjustments.push({ productId: it.productId, name: product.name, oldQty, newQty: actual, diff: actual - oldQty });
+    }
+  });
+  return adjustments;
+};
+
 export const getLowStock = async () => {
   // Только товары с остатком <= минимума (сравнение двух полей Prisma where не умеет)
   const products = await prisma.product.findMany({ where: { isActive: true }, include: { category: true } });

@@ -3,12 +3,13 @@ import { useState } from "react";
 import useAuthStore from "../store/authStore";
 import useThemeStore from "../store/themeStore";
 import toast from "react-hot-toast";
-import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, Moon, Sun, Wallet, ArrowLeft } from "lucide-react";
+import { LayoutDashboard, Package, PackagePlus, ShoppingCart, Users, CreditCard, BarChart2, LogOut, Menu, X, UserCog, Tag, Settings, ClipboardList, ClipboardCheck, Moon, Sun, Wallet, ArrowLeft } from "lucide-react";
 
 const navItems = [
   { path: "/", icon: LayoutDashboard, label: "Панель" },
   { path: "/products", icon: Package, label: "Товары" },
   { path: "/stockin", icon: PackagePlus, label: "Приём", adminOnly: true },
+  { path: "/inventory", icon: ClipboardCheck, label: "Инвентаризация", adminOnly: true },
   { path: "/pos", icon: ShoppingCart, label: "Продажа (POS)" },
   { path: "/clients", icon: Users, label: "Клиенты" },
   { path: "/debts", icon: CreditCard, label: "Долги" },

@@ -1,5 +1,5 @@
 ﻿import { Router } from "express";
-import { getAll, getById, create, update, remove, getLowStock } from "./products.controller.js";
+import { getAll, getById, create, update, remove, getLowStock, inventory } from "./products.controller.js";
 import { authMiddleware } from "../../middleware/auth.middleware.js";
 import { roleMiddleware } from "../../middleware/role.middleware.js";
 import multer from "multer";
@@ -8,6 +8,7 @@ const upload = multer({ storage: multer.memoryStorage() });
 router.use(authMiddleware);
 router.get("/", getAll);
 router.get("/low-stock", roleMiddleware("ADMIN"), getLowStock);
+router.post("/inventory", roleMiddleware("ADMIN"), inventory);
 router.get("/:id", getById);
 router.post("/", roleMiddleware("ADMIN"), upload.single("image"), create);
 router.put("/:id", roleMiddleware("ADMIN"), upload.single("image"), update);

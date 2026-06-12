@@ -35,6 +35,15 @@ export const remove = async (req, res, next) => {
     return success(res, null, 'Удалено');
   } catch (err) { next(err); }
 };
+export const inventory = async (req, res, next) => {
+  try {
+    const adjustments = await productsService.inventory(req.body.items);
+    for (const a of adjustments) {
+      await audit(req.user.id, 'INVENTORY_ADJUST', 'Product', a.productId, { quantity: a.oldQty }, { quantity: a.newQty, diff: a.diff }, req);
+    }
+    return success(res, adjustments, 'Инвентаризация применена');
+  } catch (err) { next(err); }
+};
 export const getLowStock = async (req, res, next) => {
   try {
     const data = await productsService.getLowStock();
