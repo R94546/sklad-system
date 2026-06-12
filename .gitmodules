@@ -1,0 +1,4 @@
+[submodule "sklad-mobile"]
+	path = sklad-mobile
+	url = https://github.com/R94546/sklad-system.git
+	branch = master

@@ -21,6 +21,7 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await salesService.create(req.body, req.user.id);
+    await audit(req.user.id, 'SALE_CONFIRM', 'Sale', data.id, null, { number: data.number, total: data.totalAmount, paymentType: data.paymentType }, req);
     return success(res, data, 'Продажа оформлена', 201);
   } catch (err) { next(err); }
 };

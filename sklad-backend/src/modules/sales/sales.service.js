@@ -38,11 +38,17 @@ return prisma.$transaction(async (tx) => {
     for (const item of normalizedItems) {
       const product = await tx.product.findUnique({ where: { id: item.productId } });
       if (!product) throw { status: 404, message: 'Товар не найден' };
-      if (Number(product.quantity) < item.quantity) throw { status: 400, message: product.name + ': недостаточно на складе (остаток: ' + product.quantity + ')' };
+      if (Number(product.quantity) < item.quantity) {
+        const have = Number(product.quantity);
+        throw { status: 400, message: `Не хватает товара «${product.name}»: в наличии ${have.toLocaleString('ru-RU')}, нужно ${item.quantity.toLocaleString('ru-RU')} (не хватает ${(item.quantity - have).toLocaleString('ru-RU')})` };
+      }
       totalAmount += item.price * item.quantity;
     }
 
     const finalAmount = totalAmount - discount;
+
+    // Привязка к открытой кассе магазина (как в POS-потоке confirmCart)
+    const session = await tx.cashSession.findFirst({ where: { status: "OPEN" } });
 
     const sale = await tx.sale.create({
       data: {
@@ -51,6 +57,7 @@ return prisma.$transaction(async (tx) => {
         totalAmount: finalAmount,
         discount,
         paymentType,
+        sessionId: session?.id || null,
         items: { create: normalizedItems },
       },
       include: { items: true },
