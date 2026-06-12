@@ -14,6 +14,7 @@ export default function DebtsScreen() {
   const [payModal, setPayModal] = useState(false);
   const [selected, setSelected] = useState(null);
   const [amount, setAmount] = useState('');
+  const [method, setMethod] = useState('CASH');
   const [paying, setPaying] = useState(false);
   const insets = useSafeAreaInsets();
 
@@ -28,13 +29,13 @@ export default function DebtsScreen() {
   const onRefresh = async () => { setRefreshing(true); await load(); setRefreshing(false); };
   useEffect(() => { load(); }, []);
 
-  const openPay = (debt) => { setSelected(debt); setAmount(''); setPayModal(true); };
+  const openPay = (debt) => { setSelected(debt); setAmount(''); setMethod('CASH'); setPayModal(true); };
 
   const handlePay = async () => {
     if (!amount || Number(amount) <= 0) return Alert.alert('Xato', 'Summa kiriting');
     setPaying(true);
     try {
-      await api.patch('/debts/' + selected.id + '/pay', { amount: Number(amount) });
+      await api.patch('/debts/' + selected.id + '/pay', { amount: Number(amount), method });
       Alert.alert('Muvaffaqiyat', 'Tolov qabul qilindi!');
       setPayModal(false);
       load();
@@ -170,6 +171,16 @@ export default function DebtsScreen() {
                   </Text>
                 </View>
               </View>
+              <Text style={styles.inputLabel}>Tolov usuli</Text>
+              <View style={styles.methodRow}>
+                {[{ k: 'CASH', label: 'Naqd', icon: 'cash-outline', color: '#10b981' }, { k: 'CARD', label: 'Karta', icon: 'card-outline', color: '#2563eb' }].map(m => (
+                  <TouchableOpacity key={m.k} onPress={() => setMethod(m.k)}
+                    style={[styles.methodBtn, method === m.k && { backgroundColor: m.color, borderColor: m.color }]}>
+                    <Ionicons name={m.icon} size={18} color={method === m.k ? '#fff' : '#6b7280'} />
+                    <Text style={[styles.methodLabel, method === m.k && { color: '#fff' }]}>{m.label}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <Text style={styles.inputLabel}>Tolov summasi</Text>
               <TextInput
                 style={styles.payInput}
@@ -233,6 +244,9 @@ const styles = StyleSheet.create({
   clientCard: { flexDirection: 'row', alignItems: 'center', gap: 12, backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 16, elevation: 2 },
   debtInfo: { backgroundColor: '#fff', borderRadius: 14, padding: 16, marginBottom: 20, elevation: 2 },
   inputLabel: { fontSize: 14, fontWeight: '600', color: '#374151', marginBottom: 8 },
+  methodRow: { flexDirection: 'row', gap: 10, marginBottom: 16 },
+  methodBtn: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#e5e7eb', backgroundColor: '#fff' },
+  methodLabel: { fontSize: 13, fontWeight: '600', color: '#6b7280' },
   payInput: { backgroundColor: '#fff', borderRadius: 12, padding: 16, fontSize: 18, color: '#111827', borderWidth: 1.5, borderColor: '#2563eb', marginBottom: 16 },
   submitPayBtn: { backgroundColor: '#2563eb', borderRadius: 14, paddingVertical: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, elevation: 4 },
   submitPayText: { fontSize: 16, fontWeight: '700', color: '#fff' },

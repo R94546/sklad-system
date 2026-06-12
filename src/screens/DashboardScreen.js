@@ -87,6 +87,24 @@ export default function DashboardScreen() {
             <Text style={styles.infoValue}>{data?.month?.count || 0} ta</Text>
           </View>
         </View>
+
+        {(data?.debtPaid?.total || 0) > 0 && (
+          <View style={[styles.section, { marginTop: 0 }]}>
+            <Text style={styles.sectionTitle}>Qarz tolovlari (oy)</Text>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Naqd</Text>
+              <Text style={[styles.infoValue, { color: '#10b981' }]}>{Number(data.debtPaid.CASH).toLocaleString()} so'm</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Karta</Text>
+              <Text style={[styles.infoValue, { color: '#2563eb' }]}>{Number(data.debtPaid.CARD).toLocaleString()} so'm</Text>
+            </View>
+            <View style={styles.infoRow}>
+              <Text style={styles.infoLabel}>Jami</Text>
+              <Text style={styles.infoValue}>{Number(data.debtPaid.total).toLocaleString()} so'm</Text>
+            </View>
+          </View>
+        )}
       </ScrollView>
     </View>
   );

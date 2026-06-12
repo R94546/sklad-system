@@ -11,6 +11,7 @@ import SalesScreen from '../screens/SalesScreen';
 import ClientsScreen from '../screens/ClientsScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import ScannerScreen from '../screens/ScannerScreen';
+import AuditLogScreen from '../screens/AuditLogScreen';
 
 const Tab = createBottomTabNavigator();
 const Stack = createStackNavigator();
@@ -55,6 +56,7 @@ export default function AppNavigator() {
           <>
             <Stack.Screen name="Main" component={MainTabs} />
             <Stack.Screen name="Scanner" component={ScannerScreen} />
+            <Stack.Screen name="AuditLog" component={AuditLogScreen} />
           </>
         ) : (
           <Stack.Screen name="Login" component={LoginScreen} />

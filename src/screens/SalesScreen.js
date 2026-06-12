@@ -3,6 +3,7 @@ import { View, Text, ScrollView, StyleSheet, TextInput, TouchableOpacity, Status
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import api from '../api/axios';
+import useAuthStore from '../store/authStore';
 
 const PAYMENT_TYPES = [
   { value: 'CASH', label: 'Naqd', icon: 'cash-outline', color: '#10b981' },
@@ -23,12 +24,37 @@ export default function SalesScreen({ navigation }) {
   const [clientModal, setClientModal] = useState(false);
   const [productSearch, setProductSearch] = useState('');
   const [clientSearch, setClientSearch] = useState('');
+  // Kassa: bitta umumiy, admin ochadi — sotuvchi ulanadi
+  const [session, setSession] = useState(null);
+  const [openModal, setOpenModal] = useState(false);
+  const [openingCash, setOpeningCash] = useState('');
+  const [opening, setOpening] = useState(false);
   const insets = useSafeAreaInsets();
+  const { user } = useAuthStore();
+  const isAdmin = user?.role === 'ADMIN';
+
+  const checkSession = () => api.get('/sessions/current').then(r => setSession(r.data.data || null)).catch(() => {});
 
   useEffect(() => {
     api.get('/products?limit=1000').then(r => setProducts(r.data.data.data));
     api.get('/clients').then(r => setClients(r.data.data.data));
+    checkSession();
   }, []);
+
+  // Har safar ekranga qaytganda kassa holatini yangilash
+  useEffect(() => navigation.addListener('focus', checkSession), [navigation]);
+
+  const handleOpenKassa = async () => {
+    setOpening(true);
+    try {
+      const r = await api.post('/sessions/open', { openingCash: Number(openingCash) || 0 });
+      setSession(r.data.data);
+      setOpenModal(false);
+      setOpeningCash('');
+      Alert.alert('Muvaffaqiyat', 'Kassa ochildi');
+    } catch (err) { Alert.alert('Xato', err.response?.data?.message || 'Xatolik'); }
+    setOpening(false);
+  };
 
   // Skaner orqali tovar qo'shish
   useEffect(() => {
@@ -68,6 +94,7 @@ export default function SalesScreen({ navigation }) {
   const selectedClient = clients.find(c => c.id === clientId);
 
   const handleSubmit = async () => {
+    if (!session) return Alert.alert('Kassa yopiq', isAdmin ? 'Avval kassani oching' : 'Administrator kassani ochishi kerak');
     if (items.length === 0) return Alert.alert('Xato', 'Mahsulot qoshing');
     if (paymentType === 'DEBT' && !clientId) return Alert.alert('Xato', 'Mijoz tanlang');
     if (paymentType === 'DEBT' && !dueDate) return Alert.alert('Xato', 'Muddat kiriting');
@@ -95,6 +122,24 @@ export default function SalesScreen({ navigation }) {
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
+        {!session && (
+          <View style={styles.kassaBanner}>
+            <Ionicons name="lock-closed" size={18} color="#d97706" />
+            <Text style={styles.kassaBannerText}>
+              {isAdmin ? 'Kassa yopiq — sotish uchun oching' : 'Kassa yopiq — administrator ochishi kerak'}
+            </Text>
+            {isAdmin ? (
+              <TouchableOpacity style={styles.kassaOpenBtn} onPress={() => setOpenModal(true)}>
+                <Text style={styles.kassaOpenText}>Ochish</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.kassaOpenBtn} onPress={checkSession}>
+                <Ionicons name="refresh" size={14} color="#fff" />
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
+
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tolov turi</Text>
           <View style={styles.paymentRow}>
@@ -238,6 +283,29 @@ export default function SalesScreen({ navigation }) {
         </View>
       </Modal>
 
+      <Modal visible={openModal} animationType="fade" transparent>
+        <View style={styles.kassaOverlay}>
+          <View style={styles.kassaModalCard}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Kassani ochish</Text>
+              <TouchableOpacity onPress={() => setOpenModal(false)}>
+                <Ionicons name="close" size={24} color="#111827" />
+              </TouchableOpacity>
+            </View>
+            <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Boshlang'ich naqd pul</Text>
+            <TextInput style={styles.input} placeholder="0" placeholderTextColor="#9ca3af" value={openingCash} onChangeText={setOpeningCash} keyboardType="numeric" autoFocus />
+            <TouchableOpacity style={[styles.submitBtn, { marginTop: 16 }, opening && { opacity: 0.7 }]} onPress={handleOpenKassa} disabled={opening}>
+              {opening ? <ActivityIndicator color="#fff" /> : (
+                <>
+                  <Ionicons name="lock-open-outline" size={20} color="#fff" />
+                  <Text style={styles.submitText}>Ochish</Text>
+                </>
+              )}
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
       <Modal visible={clientModal} animationType="slide" presentationStyle="pageSheet">
         <View style={styles.modalContainer}>
           <View style={styles.modalHeader}>
@@ -312,4 +380,10 @@ const styles = StyleSheet.create({
   modalItem: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', backgroundColor: '#fff', borderRadius: 12, padding: 14, marginBottom: 8, elevation: 1 },
   modalItemName: { fontSize: 14, fontWeight: '600', color: '#111827', marginBottom: 2 },
   modalItemSub: { fontSize: 12, color: '#9ca3af' },
+  kassaBanner: { flexDirection: 'row', alignItems: 'center', gap: 8, backgroundColor: '#fffbeb', borderRadius: 12, padding: 12, marginBottom: 16, borderWidth: 1, borderColor: '#fde68a' },
+  kassaBannerText: { flex: 1, fontSize: 13, color: '#d97706', fontWeight: '500' },
+  kassaOpenBtn: { backgroundColor: '#d97706', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 8, flexDirection: 'row', alignItems: 'center' },
+  kassaOpenText: { color: '#fff', fontSize: 12, fontWeight: '700' },
+  kassaOverlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', padding: 20 },
+  kassaModalCard: { backgroundColor: '#fff', borderRadius: 20, padding: 20 },
 });

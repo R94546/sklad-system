@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { View, Text, FlatList, StyleSheet, TextInput, ActivityIndicator, RefreshControl, TouchableOpacity, StatusBar } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from '../api/axios';
 import { setCache, getCache } from '../utils/cache';
 
@@ -12,7 +13,15 @@ export default function ProductsScreen({ navigation }) {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [view, setView] = useState('list'); // list | grid
   const insets = useSafeAreaInsets();
+
+  useEffect(() => { AsyncStorage.getItem('view:products').then(v => v && setView(v)); }, []);
+  const toggleView = () => {
+    const v = view === 'list' ? 'grid' : 'list';
+    setView(v);
+    AsyncStorage.setItem('view:products', v);
+  };
 
   const load = async () => {
     if (!search) {
@@ -41,9 +50,14 @@ export default function ProductsScreen({ navigation }) {
       <StatusBar barStyle="dark-content" backgroundColor="#f9fafb" />
       <View style={styles.header}>
         <Text style={styles.title}>Mahsulotlar</Text>
-        <TouchableOpacity style={styles.scanBtn} onPress={() => navigation.navigate('Scanner')}>
-          <Ionicons name="barcode-outline" size={22} color="#2563eb" />
-        </TouchableOpacity>
+        <View style={styles.headerBtns}>
+          <TouchableOpacity style={styles.scanBtn} onPress={toggleView}>
+            <Ionicons name={view === 'list' ? 'grid-outline' : 'list-outline'} size={20} color="#2563eb" />
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.scanBtn} onPress={() => navigation.navigate('Scanner')}>
+            <Ionicons name="barcode-outline" size={22} color="#2563eb" />
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchBox}>
@@ -60,6 +74,9 @@ export default function ProductsScreen({ navigation }) {
 
       <FlatList
         data={products}
+        key={view}
+        numColumns={view === 'grid' ? 2 : 1}
+        columnWrapperStyle={view === 'grid' ? { gap: 10 } : undefined}
         keyExtractor={item => item.id}
         contentContainerStyle={styles.list}
         showsVerticalScrollIndicator={false}
@@ -70,7 +87,21 @@ export default function ProductsScreen({ navigation }) {
             <Text style={styles.emptyText}>Mahsulotlar topilmadi</Text>
           </View>
         }
-        renderItem={({ item }) => (
+        renderItem={({ item }) => view === 'grid' ? (
+          <View style={styles.gridCard}>
+            <View style={styles.iconBox}>
+              <Ionicons name="cube-outline" size={20} color="#2563eb" />
+            </View>
+            <Text style={styles.name} numberOfLines={2}>{item.name}</Text>
+            <Text style={styles.category}>{item.category?.name}</Text>
+            <Text style={[styles.price, { marginTop: 6 }]}>{Number(item.sellPrice).toLocaleString()} so'm</Text>
+            <View style={[styles.badge, { marginTop: 6, backgroundColor: item.quantity <= item.minStock ? '#fef2f2' : '#ecfdf5' }]}>
+              <Text style={[styles.badgeText, { color: item.quantity <= item.minStock ? '#ef4444' : '#10b981' }]}>
+                {item.quantity} {UNITS[item.unit]}
+              </Text>
+            </View>
+          </View>
+        ) : (
           <View style={styles.card}>
             <View style={styles.cardLeft}>
               <View style={styles.iconBox}>
@@ -117,4 +148,6 @@ const styles = StyleSheet.create({
   empty: { alignItems: 'center', paddingTop: 60, gap: 12 },
   emptyText: { fontSize: 14, color: '#9ca3af' },
   scanBtn: { width: 40, height: 40, backgroundColor: '#eff6ff', borderRadius: 12, justifyContent: 'center', alignItems: 'center' },
+  headerBtns: { flexDirection: 'row', gap: 8 },
+  gridCard: { flex: 1, backgroundColor: '#ffffff', borderRadius: 14, padding: 14, marginBottom: 10, elevation: 2, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, alignItems: 'flex-start' },
 });

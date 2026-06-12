@@ -5,7 +5,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import useAuthStore from '../store/authStore';
 import api from '../api/axios';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const { user, logout } = useAuthStore();
   const insets = useSafeAreaInsets();
   const [modal, setModal] = useState(false);
@@ -63,6 +63,15 @@ export default function ProfileScreen() {
             <Text style={styles.menuLabel}>Parolni ozgartirish</Text>
             <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
           </TouchableOpacity>
+          {user?.role === 'ADMIN' && (
+            <TouchableOpacity style={styles.menuItem} onPress={() => navigation.navigate('AuditLog')}>
+              <View style={[styles.menuIcon, { backgroundColor: '#f5f3ff' }]}>
+                <Ionicons name="document-text-outline" size={20} color="#8b5cf6" />
+              </View>
+              <Text style={styles.menuLabel}>Jurnal (amallar tarixi)</Text>
+              <Ionicons name="chevron-forward" size={18} color="#9ca3af" />
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={styles.section}>
