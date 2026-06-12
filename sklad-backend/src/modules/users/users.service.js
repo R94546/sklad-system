@@ -1,10 +1,5 @@
-﻿import 'dotenv/config';
-import bcrypt from 'bcryptjs';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+﻿import bcrypt from 'bcryptjs';
+import prisma from '../../config/db.js';
 
 const select = { id: true, name: true, phone: true, role: true, isActive: true, createdAt: true, imageUrl: true, maxDiscountPercent: true, canEditPrice: true };
 
@@ -27,6 +22,7 @@ export const create = async (data) => {
       phone: data.phone.trim(),
       password: hashed,
       role: data.role || 'SELLER',
+      imageUrl: data.imageUrl || null,
       maxDiscountPercent: Number(data.maxDiscountPercent) || 0,
       canEditPrice: Boolean(data.canEditPrice),
     },

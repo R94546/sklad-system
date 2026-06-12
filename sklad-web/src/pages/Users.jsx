@@ -115,6 +115,7 @@ export default function Users() {
   const [selected, setSelected] = useState(null);
   const [imageFile, setImageFile] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
+  const [imageRemoved, setImageRemoved] = useState(false);
   const [form, setForm] = useState({ name: "", phone: "", password: "", role: "SELLER", maxDiscountPercent: 0, canEditPrice: false });
 
   const load = async () => {
@@ -127,14 +128,14 @@ export default function Users() {
   // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, []);
 
-  const openCreate = () => { setEditing(null); setForm({ name: "", phone: "", password: "", role: "SELLER", maxDiscountPercent: 0, canEditPrice: false }); setImageFile(null); setImagePreview(null); setModal(true); };
-  const openEdit = (u) => { setEditing(u); setForm({ name: u.name, phone: u.phone, password: "", role: u.role, maxDiscountPercent: u.maxDiscountPercent ?? 0, canEditPrice: u.canEditPrice ?? false }); setImageFile(null); setImagePreview(u.imageUrl || null); setModal(true); };
+  const openCreate = () => { setEditing(null); setForm({ name: "", phone: "", password: "", role: "SELLER", maxDiscountPercent: 0, canEditPrice: false }); setImageFile(null); setImagePreview(null); setImageRemoved(false); setModal(true); };
+  const openEdit = (u) => { setEditing(u); setForm({ name: u.name, phone: u.phone, password: "", role: u.role, maxDiscountPercent: u.maxDiscountPercent ?? 0, canEditPrice: u.canEditPrice ?? false }); setImageFile(null); setImagePreview(u.imageUrl || null); setImageRemoved(false); setModal(true); };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSaving(true);
     try {
-      let imageUrl = editing?.imageUrl || null;
+      let imageUrl = imageRemoved ? null : (editing?.imageUrl || null);
       if (imageFile) {
         const formData = new FormData();
         formData.append("image", imageFile);
@@ -230,8 +231,13 @@ export default function Users() {
           )}
           <div className="flex flex-col gap-1">
             <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Фото</label>
-            <input type="file" accept="image/*" onChange={e => { const file = e.target.files[0]; if (!file) return; setImageFile(file); setImagePreview(URL.createObjectURL(file)); }} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
-            {imagePreview && <img src={imagePreview} alt="preview" className="w-20 h-20 rounded-full object-cover mt-1" />}
+            <input type="file" accept="image/*" onChange={e => { const file = e.target.files[0]; if (!file) return; setImageFile(file); setImagePreview(URL.createObjectURL(file)); setImageRemoved(false); }} className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white" />
+            {imagePreview && (
+              <div className="relative w-20 h-20 mt-1">
+                <img src={imagePreview} alt="preview" className="w-20 h-20 rounded-full object-cover" />
+                <button type="button" title="Удалить фото" onClick={() => { setImageFile(null); setImagePreview(null); setImageRemoved(true); }} className="absolute -top-1 -right-1 p-1 rounded-full bg-red-500 text-white hover:bg-red-600 shadow"><X size={12} /></button>
+              </div>
+            )}
           </div>
           <div className="flex gap-3 pt-2">
             <Button type="button" variant="outline" className="flex-1" onClick={() => setModal(false)}>Отмена</Button>

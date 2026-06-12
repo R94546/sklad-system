@@ -1,6 +1,14 @@
 ﻿import * as productsService from './products.service.js';
 import { success, error } from '../../utils/response.js';
 import { audit } from '../../utils/audit.js';
+
+// Снимок товара для журнала: только значимые поля, Decimal → число
+const snapshot = (p) => p ? {
+  name: p.name, barcode: p.barcode || null, category: p.category?.name,
+  buyPrice: Number(p.buyPrice), sellPrice: Number(p.sellPrice),
+  quantity: Number(p.quantity), minStock: Number(p.minStock), unit: p.unit,
+  imageUrl: p.imageUrl || null,
+} : null;
 export const getAll = async (req, res, next) => {
   try {
     const data = await productsService.getAll(req.query);
@@ -17,21 +25,23 @@ export const getById = async (req, res, next) => {
 export const create = async (req, res, next) => {
   try {
     const data = await productsService.create(req.body, req.file);
-    await audit(req.user.id, 'PRODUCT_CREATE', 'Product', data.id, null, { name: data.name }, req);
+    await audit(req.user.id, 'PRODUCT_CREATE', 'Product', data.id, null, snapshot(data), req);
     return success(res, data, 'Создано', 201);
   } catch (err) { next(err); }
 };
 export const update = async (req, res, next) => {
   try {
+    const before = await productsService.getById(req.params.id);
     const data = await productsService.update(req.params.id, req.body, req.file);
-    await audit(req.user.id, 'PRODUCT_UPDATE', 'Product', req.params.id, null, { name: data.name }, req);
+    await audit(req.user.id, 'PRODUCT_UPDATE', 'Product', req.params.id, snapshot(before), snapshot(data), req);
     return success(res, data, 'Обновлено');
   } catch (err) { next(err); }
 };
 export const remove = async (req, res, next) => {
   try {
+    const before = await productsService.getById(req.params.id);
     await productsService.remove(req.params.id);
-    await audit(req.user.id, 'PRODUCT_DELETE', 'Product', req.params.id, null, null, req);
+    await audit(req.user.id, 'PRODUCT_DELETE', 'Product', req.params.id, snapshot(before), null, req);
     return success(res, null, 'Удалено');
   } catch (err) { next(err); }
 };
