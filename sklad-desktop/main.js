@@ -1,6 +1,7 @@
-const { app, BrowserWindow, Tray, Menu, nativeImage, shell } = require('electron');
+const { app, BrowserWindow, Tray, Menu, nativeImage, shell, dialog } = require('electron');
 const path = require('path');
 const { default: Store } = require('electron-store');
+const { autoUpdater } = require('electron-updater');
 
 const APP_URL = 'https://sklad-web-app.vercel.app';
 const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
@@ -8,6 +9,7 @@ const ICON_PATH = path.join(__dirname, 'assets', 'icon.png');
 const store = new Store();
 let mainWindow;
 let tray;
+let updateDownloaded = false;
 
 function createWindow() {
   const bounds = store.get('windowBounds', { width: 1280, height: 800 });
@@ -79,6 +81,7 @@ function createTray() {
     { label: 'Sklad — система управления', enabled: false },
     { type: 'separator' },
     { label: 'Открыть', click: () => { mainWindow.show(); mainWindow.focus(); } },
+    { label: 'Проверить обновления', click: () => checkForUpdates(true) },
     { type: 'separator' },
     { label: 'Выход', click: () => { app.isQuiting = true; app.quit(); } },
   ]);
@@ -86,6 +89,61 @@ function createTray() {
   tray.setToolTip('Sklad');
   tray.setContextMenu(contextMenu);
   tray.on('double-click', () => { mainWindow.show(); mainWindow.focus(); });
+}
+
+// ===== Автообновление (через GitHub Releases) =====
+// manual=true — показывать сообщения даже когда обновлений нет (ручная проверка из трея)
+function checkForUpdates(manual = false) {
+  autoUpdater.autoDownload = true;
+
+  autoUpdater.removeAllListeners();
+
+  autoUpdater.on('update-available', (info) => {
+    if (manual) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info', title: 'Обновление',
+        message: 'Доступна новая версия ' + info.version,
+        detail: 'Загрузка началась. Мы сообщим, когда всё будет готово.',
+        buttons: ['OK'],
+      });
+    }
+  });
+
+  autoUpdater.on('update-not-available', () => {
+    if (manual) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'info', title: 'Обновление',
+        message: 'У вас последняя версия',
+        detail: 'Текущая версия: ' + app.getVersion(),
+        buttons: ['OK'],
+      });
+    }
+  });
+
+  autoUpdater.on('update-downloaded', (info) => {
+    updateDownloaded = true;
+    dialog.showMessageBox(mainWindow, {
+      type: 'info', title: 'Обновление готово',
+      message: 'Версия ' + info.version + ' загружена',
+      detail: 'Перезапустить приложение, чтобы установить обновление?',
+      buttons: ['Перезапустить', 'Позже'], defaultId: 0, cancelId: 1,
+    }).then(({ response }) => {
+      if (response === 0) { app.isQuiting = true; autoUpdater.quitAndInstall(); }
+    });
+  });
+
+  autoUpdater.on('error', (err) => {
+    if (manual) {
+      dialog.showMessageBox(mainWindow, {
+        type: 'error', title: 'Ошибка обновления',
+        message: 'Не удалось проверить обновления',
+        detail: String(err?.message || err),
+        buttons: ['OK'],
+      });
+    }
+  });
+
+  autoUpdater.checkForUpdates().catch(() => {});
 }
 
 const gotLock = app.requestSingleInstanceLock();
@@ -99,6 +157,9 @@ if (!gotLock) {
   app.whenReady().then(() => {
     createWindow();
     createTray();
+    // Тихая проверка обновлений при запуске + раз в 6 часов
+    checkForUpdates(false);
+    setInterval(() => { if (!updateDownloaded) checkForUpdates(false); }, 6 * 60 * 60 * 1000);
   });
 }
 

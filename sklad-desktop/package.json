@@ -6,11 +6,19 @@
   "author": "Sklad",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder --win"
+    "build": "electron-builder --win --publish never",
+    "release": "electron-builder --win --publish always"
   },
   "build": {
     "appId": "com.sklad.app",
     "productName": "Sklad",
+    "publish": [
+      {
+        "provider": "github",
+        "owner": "R94546",
+        "repo": "sklad-system"
+      }
+    ],
     "directories": {
       "output": "dist"
     },
@@ -37,6 +45,7 @@
   },
   "dependencies": {
     "auto-launch": "^5.0.6",
-    "electron-store": "^11.0.2"
+    "electron-store": "^11.0.2",
+    "electron-updater": "^6.8.9"
   }
 }
