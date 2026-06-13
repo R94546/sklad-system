@@ -1,17 +1,34 @@
 {
   "name": "sklad-desktop",
   "version": "1.0.0",
-  "description": "Sklad boshqaruv tizimi",
+  "description": "Sklad — система управления складом",
   "main": "main.js",
+  "author": "Sklad",
   "scripts": {
     "start": "electron .",
-    "build": "electron-builder"
+    "build": "electron-builder --win"
   },
   "build": {
     "appId": "com.sklad.app",
     "productName": "Sklad",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "assets/**/*"
+    ],
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "assets/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Sklad"
     }
   },
   "devDependencies": {
