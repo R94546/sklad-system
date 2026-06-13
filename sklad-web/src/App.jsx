@@ -20,6 +20,7 @@ const Settings = lazy(() => import('./pages/Settings'));
 const AuditLog = lazy(() => import('./pages/AuditLog'));
 const POS = lazy(() => import('./pages/POS'));
 const Sessions = lazy(() => import('./pages/Sessions'));
+const SuperAdmin = lazy(() => import('./pages/SuperAdmin'));
 
 const PageLoader = () => (
   <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-900">
@@ -29,12 +30,19 @@ const PageLoader = () => (
 
 const PrivateRoute = ({ children }) => {
   const { user } = useAuthStore();
-  return user ? <MainLayout>{children}</MainLayout> : <Navigate to="/login" />;
+  if (!user) return <Navigate to="/login" />;
+  if (user.role === 'SUPER_ADMIN') return <Navigate to="/admin" />;
+  return <MainLayout>{children}</MainLayout>;
 };
 
 const AdminRoute = ({ children }) => {
   const { user } = useAuthStore();
   return user?.role === 'ADMIN' ? <PrivateRoute>{children}</PrivateRoute> : <Navigate to="/" />;
+};
+
+const SuperAdminRoute = ({ children }) => {
+  const { user } = useAuthStore();
+  return user?.role === 'SUPER_ADMIN' ? <>{children}</> : <Navigate to="/" />;
 };
 
 export default function App() {
@@ -59,6 +67,7 @@ export default function App() {
           <Route path="/audit" element={<AdminRoute><AuditLog /></AdminRoute>} />
           <Route path="/sessions" element={<AdminRoute><Sessions /></AdminRoute>} />
           <Route path="/pos" element={<PrivateRoute><POS /></PrivateRoute>} />
+          <Route path="/admin" element={<SuperAdminRoute><SuperAdmin /></SuperAdminRoute>} />
         </Routes>
       </Suspense>
     </BrowserRouter>

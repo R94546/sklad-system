@@ -1,9 +1,4 @@
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
-
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+import prisma from '../../config/db.js';
 
 export const getAll = async (query) => {
   const { search, page = 1, limit = 20 } = query;

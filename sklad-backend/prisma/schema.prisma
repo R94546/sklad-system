@@ -6,29 +6,56 @@ datasource db {
   provider = "postgresql"
 }
 
-model User {
-  id            String         @id @default(uuid())
-  name          String
-  phone         String         @unique
-  password      String
-  role          Role           @default(SELLER)
-  isActive      Boolean        @default(true)
-  imageUrl      String?
-  maxDiscountPercent Float     @default(0)
-  canEditPrice  Boolean        @default(false)
-  createdAt     DateTime       @default(now())
+// Арендатор (магазин/склад). Каждый Organization — изолированный «свой склад».
+// Все бизнес-данные scoped по organizationId (см. src/config/tenant.js).
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  users         User[]
+  categories    Category[]
+  products      Product[]
+  clients       Client[]
   sales         Sale[]
+  saleItems     SaleItem[]
+  debts         Debt[]
+  debtPayments  DebtPayment[]
   stockIns      StockIn[]
-  refreshTokens RefreshToken[]
   auditLogs     AuditLog[]
   cashSessions  CashSession[]
-  debtPayments  DebtPayment[]
+  cashMovements CashMovement[]
+  settings      Settings?
+}
+
+model User {
+  id                 String         @id @default(uuid())
+  name               String
+  phone              String         @unique
+  password           String
+  role               Role           @default(SELLER)
+  isActive           Boolean        @default(true)
+  imageUrl           String?
+  maxDiscountPercent Float          @default(0)
+  canEditPrice       Boolean        @default(false)
+  createdAt          DateTime       @default(now())
+  // null — только у SUPER_ADMIN (вне организаций)
+  organizationId     String?
+  organization       Organization?  @relation(fields: [organizationId], references: [id])
+  sales              Sale[]
+  stockIns           StockIn[]
+  refreshTokens      RefreshToken[]
+  auditLogs          AuditLog[]
+  cashSessions       CashSession[]
+  debtPayments       DebtPayment[]
 }
 
 enum Role {
   ADMIN
   SELLER
   KASSIR
+  SUPER_ADMIN
 }
 
 model RefreshToken {
@@ -40,27 +67,37 @@ model RefreshToken {
 }
 
 model Category {
-  id       String    @id @default(uuid())
-  name     String    @unique
-  products Product[]
+  id             String        @id @default(uuid())
+  name           String
+  products       Product[]
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Имя категории уникально в пределах склада, а не глобально
+  @@unique([organizationId, name])
 }
 
 model Product {
-  id         String     @id @default(uuid())
-  name       String
-  barcode    String?    @unique
-  categoryId String
-  category   Category   @relation(fields: [categoryId], references: [id])
-  buyPrice   Decimal
-  sellPrice  Decimal
-  quantity   Decimal    @default(0)
-  minStock   Decimal    @default(10)
-  unit       Unit       @default(PIECE)
-  imageUrl   String?
-  isActive   Boolean    @default(true)
-  createdAt  DateTime   @default(now())
-  saleItems  SaleItem[]
-  stockIns   StockIn[]
+  id             String        @id @default(uuid())
+  name           String
+  barcode        String?
+  categoryId     String
+  category       Category      @relation(fields: [categoryId], references: [id])
+  buyPrice       Decimal
+  sellPrice      Decimal
+  quantity       Decimal       @default(0)
+  minStock       Decimal       @default(10)
+  unit           Unit          @default(PIECE)
+  imageUrl       String?
+  isActive       Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  saleItems      SaleItem[]
+  stockIns       StockIn[]
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Штрихкод уникален в пределах склада (разные склады могут сканировать одинаковые коды)
+  @@unique([organizationId, barcode])
 }
 
 enum Unit {
@@ -72,36 +109,43 @@ enum Unit {
 }
 
 model Client {
-  id        String   @id @default(uuid())
-  name      String
-  phone     String   @unique
-  address   String?
-  note      String?
-  isBlocked Boolean  @default(false)
-  createdAt DateTime @default(now())
-  sales     Sale[]
-  debts     Debt[]
+  id             String        @id @default(uuid())
+  name           String
+  phone          String
+  address        String?
+  note           String?
+  isBlocked      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  sales          Sale[]
+  debts          Debt[]
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
+
+  // Телефон клиента уникален в пределах склада, а не глобально
+  @@unique([organizationId, phone])
 }
 
 model Sale {
-  id          String      @id @default(uuid())
-  number      Int         @default(autoincrement())
-  note        String?
-  userId      String
-  user        User        @relation(fields: [userId], references: [id])
-  clientId    String?
-  client      Client?     @relation(fields: [clientId], references: [id])
-  totalAmount Decimal
-  discount     Decimal     @default(0)
-  discountType String      @default("AMOUNT")
-  returnReason String      @default("")
-  paymentType PaymentType
-  status      SaleStatus  @default(COMPLETED)
-  createdAt   DateTime    @default(now())
-  sessionId   String?
-  session     CashSession? @relation(fields: [sessionId], references: [id])
-  items       SaleItem[]
-  debt        Debt?
+  id             String        @id @default(uuid())
+  number         Int           @default(autoincrement())
+  note           String?
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  clientId       String?
+  client         Client?       @relation(fields: [clientId], references: [id])
+  totalAmount    Decimal
+  discount       Decimal       @default(0)
+  discountType   String        @default("AMOUNT")
+  returnReason   String        @default("")
+  paymentType    PaymentType
+  status         SaleStatus    @default(COMPLETED)
+  createdAt      DateTime      @default(now())
+  sessionId      String?
+  session        CashSession?  @relation(fields: [sessionId], references: [id])
+  items          SaleItem[]
+  debt           Debt?
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 enum PaymentType {
@@ -120,42 +164,48 @@ enum SaleStatus {
 }
 
 model SaleItem {
-  id        String   @id @default(uuid())
-  saleId    String
-  sale      Sale     @relation(fields: [saleId], references: [id])
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  quantity  Decimal
-  price     Decimal
+  id             String        @id @default(uuid())
+  saleId         String
+  sale           Sale          @relation(fields: [saleId], references: [id])
+  productId      String
+  product        Product       @relation(fields: [productId], references: [id])
+  quantity       Decimal
+  price          Decimal
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 
   // Одна строка на товар в чеке: быстрые параллельные клики не создают дублей
   @@unique([saleId, productId])
 }
 
 model Debt {
-  id        String     @id @default(uuid())
-  saleId    String     @unique
-  sale      Sale       @relation(fields: [saleId], references: [id])
-  clientId  String
-  client    Client     @relation(fields: [clientId], references: [id])
-  amount    Decimal
-  paid      Decimal    @default(0)
-  dueDate   DateTime
-  status    DebtStatus @default(PENDING)
-  createdAt DateTime   @default(now())
-  payments  DebtPayment[]
+  id             String        @id @default(uuid())
+  saleId         String        @unique
+  sale           Sale          @relation(fields: [saleId], references: [id])
+  clientId       String
+  client         Client        @relation(fields: [clientId], references: [id])
+  amount         Decimal
+  paid           Decimal       @default(0)
+  dueDate        DateTime
+  status         DebtStatus    @default(PENDING)
+  createdAt      DateTime      @default(now())
+  payments       DebtPayment[]
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 // Погашение долга: каждый платёж отдельно, со способом оплаты (для аналитики)
 model DebtPayment {
-  id        String    @id @default(uuid())
-  debtId    String
-  debt      Debt      @relation(fields: [debtId], references: [id])
-  amount    Decimal
-  method    PayMethod @default(CASH)
-  userId    String?
-  user      User?     @relation(fields: [userId], references: [id])
-  createdAt DateTime  @default(now())
+  id             String        @id @default(uuid())
+  debtId         String
+  debt           Debt          @relation(fields: [debtId], references: [id])
+  amount         Decimal
+  method         PayMethod     @default(CASH)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id])
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 enum PayMethod {
@@ -168,58 +218,71 @@ enum DebtStatus {
   PAID
   OVERDUE
 }
+
 model StockIn {
-  id        String   @id @default(uuid())
-  productId String
-  product   Product  @relation(fields: [productId], references: [id])
-  quantity  Decimal
-  price     Decimal
-  note      String?
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  createdAt DateTime @default(now())
+  id             String        @id @default(uuid())
+  productId      String
+  product        Product       @relation(fields: [productId], references: [id])
+  quantity       Decimal
+  price          Decimal
+  note           String?
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
+
 model AuditLog {
-  id        String   @id @default(uuid())
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
-  action    String
-  entity    String
-  entityId  String?
-  oldData   Json?
-  newData   Json?
-  ip        String?
-  userAgent String?
-  createdAt DateTime @default(now())
+  id             String        @id @default(uuid())
+  userId         String
+  user           User          @relation(fields: [userId], references: [id])
+  action         String
+  entity         String
+  entityId       String?
+  oldData        Json?
+  newData        Json?
+  ip             String?
+  userAgent      String?
+  createdAt      DateTime      @default(now())
+  // nullable: системные события (например LOGIN) могут быть вне org-контекста
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
+
 model Settings {
-  id            String   @id @default("1")
-  companyName   String   @default("Sklad")
-  companyPhone  String?
+  id             String        @id @default(uuid())
+  companyName    String        @default("Sklad")
+  companyPhone   String?
   companyAddress String?
-  currency      String   @default("UZS")
-  taxPercent    Float    @default(0)
-  smsTemplate   String   @default("Hurmatli {name}, {amount} so'm qarzingiz muddati {date} da tugaydi.")
-  reminderDays  Int      @default(1)
-  updatedAt     DateTime @updatedAt
+  currency       String        @default("UZS")
+  taxPercent     Float         @default(0)
+  smsTemplate    String        @default("Hurmatli {name}, {amount} so'm qarzingiz muddati {date} da tugaydi.")
+  reminderDays   Int           @default(1)
+  updatedAt      DateTime      @updatedAt
+  // одна строка настроек на организацию
+  organizationId String?       @unique
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 // Смена (касса) — открытие/закрытие
 model CashSession {
-  id           String        @id @default(uuid())
-  sellerId     String
-  seller       User          @relation(fields: [sellerId], references: [id])
-  openingCash  Float         @default(0)
-  openingNote  String?
-  closingCash  Float?
-  expectedCash Float?
-  difference   Float?
-  closingNote  String?
-  status       SessionStatus @default(OPEN)
-  openedAt     DateTime      @default(now())
-  closedAt     DateTime?
-  sales        Sale[]
-  movements    CashMovement[]
+  id             String         @id @default(uuid())
+  sellerId       String
+  seller         User           @relation(fields: [sellerId], references: [id])
+  openingCash    Float          @default(0)
+  openingNote    String?
+  closingCash    Float?
+  expectedCash   Float?
+  difference     Float?
+  closingNote    String?
+  status         SessionStatus  @default(OPEN)
+  openedAt       DateTime       @default(now())
+  closedAt       DateTime?
+  sales          Sale[]
+  movements      CashMovement[]
+  organizationId String?
+  organization   Organization?  @relation(fields: [organizationId], references: [id])
 }
 
 enum SessionStatus {
@@ -229,23 +292,18 @@ enum SessionStatus {
 
 // Наличные приход/расход в кассе
 model CashMovement {
-  id        String      @id @default(uuid())
-  sessionId String
-  session   CashSession @relation(fields: [sessionId], references: [id])
-  type      CashType
-  amount    Float
-  reason    String
-  createdAt DateTime    @default(now())
+  id             String        @id @default(uuid())
+  sessionId      String
+  session        CashSession   @relation(fields: [sessionId], references: [id])
+  type           CashType
+  amount         Float
+  reason         String
+  createdAt      DateTime      @default(now())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id])
 }
 
 enum CashType {
   IN
   OUT
 }
-
-
-
-
-
-
-

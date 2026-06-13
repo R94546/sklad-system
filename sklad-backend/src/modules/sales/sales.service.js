@@ -1,4 +1,5 @@
 ﻿import prisma from '../../config/db.js';
+import { getOrgId } from '../../config/tenant.js';
 
 export const getAll = async (query) => {
   const { page = 1, limit = 20, userId, status } = query;
@@ -58,7 +59,8 @@ return prisma.$transaction(async (tx) => {
         discount,
         paymentType,
         sessionId: session?.id || null,
-        items: { create: normalizedItems },
+        // org для вложенного create задаём вручную: extension не проходит по nested-writes
+        items: { create: normalizedItems.map((i) => ({ ...i, organizationId: getOrgId() })) },
       },
       include: { items: true },
     });

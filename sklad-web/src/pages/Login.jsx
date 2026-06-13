@@ -17,8 +17,12 @@ export default function Login() {
     try {
       const res = await api.post('/auth/login', { phone, password });
       login(res.data.data);
-      toast.success('Добро пожаловать!');
-      navigate('/');
+      toast.success('Xush kelibsiz!');
+      if (res.data.data.user?.role === 'SUPER_ADMIN') {
+        navigate('/admin');
+      } else {
+        navigate('/');
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'Ошибка');
     } finally {

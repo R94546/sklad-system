@@ -6,7 +6,9 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "npx prisma generate && node src/server.js",
-    "postinstall": "npx prisma generate"
+    "postinstall": "npx prisma generate",
+    "backfill:org": "node src/scripts/backfillOrg.js",
+    "seed:superadmin": "node src/scripts/seedSuperAdmin.js"
   },
   "keywords": [],
   "author": "",

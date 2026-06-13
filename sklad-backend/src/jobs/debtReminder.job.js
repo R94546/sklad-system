@@ -1,11 +1,9 @@
 import cron from 'node-cron';
-import 'dotenv/config';
-import { PrismaClient } from '@prisma/client';
-import { PrismaPg } from '@prisma/adapter-pg';
+import { rawPrisma as prisma } from '../config/db.js';
 import { sendSms } from '../utils/sms.js';
 
-const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL });
-const prisma = new PrismaClient({ adapter });
+// Cron работает вне запроса (нет org-контекста) и должен видеть долги ВСЕХ складов,
+// поэтому используем rawPrisma (без org-фильтра).
 
 const checkDebts = async () => {
   try {
