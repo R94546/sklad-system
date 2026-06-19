@@ -54,6 +54,7 @@ export default function POS() {
   const [showScanner, setShowScanner] = useState(false);
   const [showClient, setShowClient] = useState(false);
   const [showNote, setShowNote] = useState(false);
+  const [showCreateProduct, setShowCreateProduct] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   // Чек
@@ -467,6 +468,11 @@ export default function POS() {
                   <button onClick={reloadData} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
                     <RefreshCw size={16} /> Обновить данные
                   </button>
+                  {isAdmin && (
+                    <button onClick={() => { setMenuOpen(false); setShowCreateProduct(true); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
+                      <Plus size={16} /> Создать товар
+                    </button>
+                  )}
                   <div className="h-px bg-white/10 my-1" />
                   <button onClick={() => { setMenuOpen(false); session ? setShowCashMove(true) : toast.error("Касса не открыта"); }} className="w-full flex items-center gap-3 px-4 py-2.5 hover:bg-white/10 transition">
                     <Wallet size={16} /> Поступления / выплаты
@@ -774,6 +780,15 @@ export default function POS() {
       {/* ===== ЗАМЕТКА ===== */}
       {showNote && <NoteModal value={note} onSave={(v) => { setNote(v); setShowNote(false); }} onClose={() => setShowNote(false)} />}
 
+      {/* ===== БЫСТРОЕ СОЗДАНИЕ ТОВАРА (как «Create Product» в Odoo) ===== */}
+      {showCreateProduct && (
+        <ProductQuickModal
+          categories={categories}
+          onCreated={(p) => { setProducts((prev) => [p, ...prev]); setShowCreateProduct(false); toast.success("Товар создан"); }}
+          onClose={() => setShowCreateProduct(false)}
+        />
+      )}
+
       {/* ===== КАССА: открывает админ, продавец подключается ===== */}
       {sessionLoaded && !session && (
         isAdmin
@@ -926,6 +941,84 @@ function NoteModal({ value, onSave, onClose }) {
         <div className="flex gap-2">
           <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Отмена</button>
           <button onClick={() => onSave(v)} className="flex-1 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold transition">Сохранить</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ===== Модал: быстрое создание товара (Odoo «Create Product») ===== */
+function ProductQuickModal({ categories, onCreated, onClose }) {
+  const [form, setForm] = useState({
+    name: "", sellPrice: "", buyPrice: "", categoryId: categories[0]?.id || "",
+    barcode: "", quantity: "", unit: "PIECE",
+  });
+  const [saving, setSaving] = useState(false);
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  const save = async () => {
+    if (!form.name.trim()) return toast.error("Введите название товара");
+    if (!form.categoryId) return toast.error("Выберите категорию");
+    if (!form.sellPrice || Number(form.sellPrice) <= 0) return toast.error("Введите цену продажи");
+    setSaving(true);
+    try {
+      const r = await api.post("/products", {
+        name: form.name.trim(),
+        categoryId: form.categoryId,
+        sellPrice: Number(form.sellPrice),
+        buyPrice: Number(form.buyPrice) || 0,
+        quantity: Number(form.quantity) || 0,
+        unit: form.unit,
+        ...(form.barcode.trim() && { barcode: form.barcode.trim() }),
+      });
+      onCreated(r.data.data);
+    } catch (e) { toast.error(e.response?.data?.message || "Ошибка создания"); }
+    setSaving(false);
+  };
+
+  const cls = "w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500";
+
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md max-h-[88vh] overflow-y-auto">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
+          <h2 className="font-bold text-slate-800 dark:text-white">Новый товар</h2>
+          <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
+        </div>
+        <div className="p-5 space-y-3">
+          <input autoFocus value={form.name} onChange={set("name")} placeholder="Название товара" className={cls} />
+          <select value={form.categoryId} onChange={set("categoryId")} className={cls}>
+            <option value="">Категория…</option>
+            {categories.map((c) => <option key={c.id} value={c.id}>{c.name}</option>)}
+          </select>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-400">Цена продажи</label>
+              <input value={form.sellPrice} onChange={set("sellPrice")} inputMode="decimal" placeholder="0" className={cls} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Закупка</label>
+              <input value={form.buyPrice} onChange={set("buyPrice")} inputMode="decimal" placeholder="0" className={cls} />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-xs text-slate-400">Остаток</label>
+              <input value={form.quantity} onChange={set("quantity")} inputMode="decimal" placeholder="0" className={cls} />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400">Единица</label>
+              <select value={form.unit} onChange={set("unit")} className={cls}>
+                {Object.entries(UNITS).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+              </select>
+            </div>
+          </div>
+          <input value={form.barcode} onChange={set("barcode")} placeholder="Штрихкод (необязательно)" className={cls} />
+          <div className="flex gap-2 pt-1">
+            <button onClick={onClose} className="flex-1 py-2.5 rounded-lg border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Отмена</button>
+            <button onClick={save} disabled={saving} className="flex-1 py-2.5 rounded-lg bg-teal-600 hover:bg-teal-700 text-white font-semibold transition disabled:opacity-50">{saving ? "..." : "Сохранить"}</button>
+          </div>
         </div>
       </div>
     </div>
