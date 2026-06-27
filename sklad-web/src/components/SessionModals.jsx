@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
-import { X, Banknote, ArrowDownCircle, ArrowUpCircle, LogOut, Lock, RefreshCw } from "lucide-react";
+import { X, Banknote, ArrowDownCircle, ArrowUpCircle, LogOut, Lock, RefreshCw, Download } from "lucide-react";
 import api from "../api/axios";
+import { exportToExcel } from "../utils/export.js";
 import toast from "react-hot-toast";
 
 const fmt = (n) => Math.round(Number(n) || 0).toLocaleString("ru-RU");
@@ -121,6 +122,24 @@ export function CloseSessionModal({ session, onClosed, onClose }) {
     setSaving(false);
   };
 
+  // Daily Sale — выгрузка сводки смены в Excel (как кнопка «Daily Sale» в Odoo)
+  const dailySale = () => {
+    const b = detail?.breakdown;
+    const rows = [
+      { k: "Смена открыта", v: detail?.openedAt ? new Date(detail.openedAt).toLocaleString("ru-RU") : "" },
+      { k: "Открытие (наличные)", v: b?.cash.opening ?? (Number(detail?.openingCash ?? session.openingCash) || 0) },
+      { k: "Наличные — продажи", v: b?.cash.payments ?? 0 },
+      { k: "Наличные — приход/расход", v: b?.cash.movements ?? 0 },
+      { k: "Наличные — ожидаемо", v: b?.cash.expected ?? expected },
+      { k: "Карта", v: b?.card.expected ?? 0 },
+      { k: "Аккаунт клиента (долг)", v: b?.account.expected ?? 0 },
+      { k: "Всего продаж", v: detail?.salesTotal ?? 0 },
+      { k: "Кол-во чеков", v: detail?.sales?.length ?? 0 },
+    ];
+    exportToExcel(rows, [{ title: "Показатель", key: "k" }, { title: "Сумма (сом)", key: "v" }], "daily-sale-" + new Date().toISOString().slice(0, 10));
+    toast.success("Daily Sale выгружен");
+  };
+
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
@@ -178,6 +197,10 @@ export function CloseSessionModal({ session, onClosed, onClose }) {
 
           <textarea value={note} onChange={(e) => setNote(e.target.value)} rows={2} placeholder="Заметка при закрытии..."
             className="w-full border border-slate-300 dark:border-slate-600 rounded-lg px-3 py-2.5 text-sm bg-white dark:bg-slate-700 text-slate-900 dark:text-white outline-none focus:ring-2 focus:ring-teal-500 resize-none" />
+
+          <button onClick={dailySale} className="w-full flex items-center justify-center gap-2 py-2 rounded-xl border border-slate-300 dark:border-slate-600 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+            <Download size={15} /> Daily Sale (выгрузка в Excel)
+          </button>
 
           <div className="flex gap-3 pt-1">
             <button onClick={onClose} className="flex-1 py-2.5 rounded-xl border border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 font-medium hover:bg-slate-50 dark:hover:bg-slate-700 transition">Отмена</button>
