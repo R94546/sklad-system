@@ -130,10 +130,36 @@ export function CloseSessionModal({ session, onClosed, onClose }) {
           <button onClick={onClose} className="text-slate-400 hover:text-slate-600"><X size={20} /></button>
         </div>
 
-        <div className="p-5 space-y-3">
-          <Row label="Открытие" value={fmt(detail?.openingCash ?? session.openingCash) + " сом"} />
-          <Row label="Продажи (наличные учтены)" value={fmt(detail?.salesTotal ?? 0) + " сом"} />
-          <Row label="Ожидаемая наличность" value={fmt(expected) + " сом"} bold />
+        <div className="p-5 space-y-3 max-h-[72vh] overflow-y-auto">
+          {detail?.breakdown ? (
+            <div className="space-y-2">
+              <div>
+                <div className="flex justify-between items-baseline">
+                  <span className="font-bold text-slate-800 dark:text-white">Наличные</span>
+                  <span className="font-bold tabular-nums text-slate-900 dark:text-white">{fmt(detail.breakdown.cash.expected)} сом</span>
+                </div>
+                <SubRow label="Открытие" value={detail.breakdown.cash.opening} />
+                <SubRow label="Продажи (нал.)" value={detail.breakdown.cash.payments} />
+                <SubRow label="Приход / расход" value={detail.breakdown.cash.movements} signed />
+              </div>
+              <div className="flex justify-between items-baseline pt-2 border-t border-slate-100 dark:border-slate-700">
+                <span className="font-bold text-slate-800 dark:text-white">Карта</span>
+                <span className="font-bold tabular-nums text-slate-900 dark:text-white">{fmt(detail.breakdown.card.expected)} сом</span>
+              </div>
+              <div className="flex justify-between items-baseline pt-2 border-t border-slate-100 dark:border-slate-700">
+                <span className="font-bold text-slate-800 dark:text-white">Аккаунт клиента (долг)</span>
+                <span className="font-bold tabular-nums text-slate-900 dark:text-white">{fmt(detail.breakdown.account.expected)} сом</span>
+              </div>
+            </div>
+          ) : (
+            <>
+              <Row label="Открытие" value={fmt(detail?.openingCash ?? session.openingCash) + " сом"} />
+              <Row label="Продажи (наличные учтены)" value={fmt(detail?.salesTotal ?? 0) + " сом"} />
+            </>
+          )}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-700">
+            <Row label="Ожидаемая наличность" value={fmt(expected) + " сом"} bold />
+          </div>
 
           <div>
             <label className="text-sm text-slate-500 dark:text-slate-400">Подсчёт наличности</label>
@@ -228,6 +254,16 @@ function Row({ label, value, bold }) {
     <div className="flex justify-between items-baseline">
       <span className="text-sm text-slate-500 dark:text-slate-400">{label}</span>
       <span className={"tabular-nums " + (bold ? "text-lg font-bold text-slate-900 dark:text-white" : "text-slate-700 dark:text-slate-200")}>{value}</span>
+    </div>
+  );
+}
+
+function SubRow({ label, value, signed }) {
+  const v = Number(value) || 0;
+  return (
+    <div className="flex justify-between items-baseline pl-3 mt-0.5">
+      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-xs tabular-nums text-slate-500 dark:text-slate-400">{signed && v >= 0 ? "+" : ""}{fmt(v)} сом</span>
     </div>
   );
 }

@@ -56,6 +56,33 @@ const computeExpected = async (session) => {
   return Math.round(Number(session.openingCash) + cashFromSales + movNet);
 };
 
+// Разбивка по методам оплаты (как в Odoo «Закрытие кассы»): наличные/карта/аккаунт клиента.
+// Только для отображения — расчёт ожидаемой наличности (close) не меняется.
+const computeBreakdown = async (session) => {
+  const sales = await prisma.sale.findMany({
+    where: { sessionId: session.id, status: "COMPLETED" },
+    include: { debt: true },
+  });
+  let cash = 0, card = 0, account = 0;
+  for (const s of sales) {
+    const tot = Number(s.totalAmount) || 0;
+    const debt = Number(s.debt?.amount) || 0;
+    if (s.paymentType === "CARD") card += tot;
+    else if (s.paymentType === "DEBT") account += debt || tot;
+    else if (s.paymentType === "MIXED") { account += debt; cash += Math.max(0, tot - debt); }
+    else cash += tot; // CASH
+  }
+  const movements = await prisma.cashMovement.findMany({ where: { sessionId: session.id } });
+  let movNet = 0;
+  for (const m of movements) movNet += m.type === "IN" ? Number(m.amount) : -Number(m.amount);
+  const opening = Number(session.openingCash) || 0;
+  return {
+    cash: { opening: Math.round(opening), payments: Math.round(cash), movements: Math.round(movNet), expected: Math.round(opening + cash + movNet) },
+    card: { payments: Math.round(card), expected: Math.round(card) },
+    account: { payments: Math.round(account), expected: Math.round(account) },
+  };
+};
+
 // Закрыть смену (с расчётом разницы)
 export const close = async (id, data) => {
   const session = await prisma.cashSession.findUnique({ where: { id } });
@@ -90,7 +117,8 @@ export const getById = async (id) => {
   if (!session) throw { status: 404, message: "Смена не найдена" };
   const expectedCash = session.status === "OPEN" ? await computeExpected(session) : session.expectedCash;
   const salesTotal = session.sales.reduce((s, x) => s + Number(x.totalAmount), 0);
-  return { ...session, expectedCash, salesTotal };
+  const breakdown = await computeBreakdown(session);
+  return { ...session, expectedCash, salesTotal, breakdown };
 };
 
 // Список смен (админ)
